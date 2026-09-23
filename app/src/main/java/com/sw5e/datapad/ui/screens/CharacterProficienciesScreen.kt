@@ -1,6 +1,5 @@
 package com.sw5e.datapad.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,11 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,10 +22,10 @@ import androidx.compose.ui.unit.dp
 import com.sw5e.datapad.data.CharacterSkillEntity
 import com.sw5e.datapad.ui.MainViewModel
 import com.sw5e.datapad.ui.components.SaveBox
+import com.sw5e.datapad.ui.dialogs.AddArmorWeaponProficiencyDialog
 import com.sw5e.datapad.ui.dialogs.FeatAddDialog
 import com.sw5e.datapad.ui.dialogs.SkillEditDialog
 import com.sw5e.datapad.ui.dialogs.ToolProficiencyAddDialog
-import com.sw5e.datapad.ui.dialogs.AddArmorWeaponProficiencyDialog
 import com.sw5e.datapad.ui.theme.*
 
 private data class CombinedProficiencyItem(
@@ -39,7 +36,7 @@ private data class CombinedProficiencyItem(
 @Composable
 fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     val character by viewModel.character.collectAsState()
-    val skills by viewModel.skills.collectAsState()
+    val skills = character.skills
     val profBonus = viewModel.getProficiencyBonus()
     val featsDict by viewModel.featsDictionary.collectAsState()
     val toolsDict by viewModel.toolsDictionary.collectAsState()
@@ -62,7 +59,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
             currentFeats = character.feats,
             onDismiss = { showAddFeatDialog = false },
             onSave = { newFeatName ->
-                val updatedFeats = character.feats.toMutableList().apply { add(newFeatName) }
+                val updatedFeats = character.feats + newFeatName
                 viewModel.updateCharacter(character.copy(feats = updatedFeats))
             }
         )
@@ -317,13 +314,13 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
                         items(character.feats) { featName ->
                             val featData = featsDict[featName] ?: featsDict.values.find { it.name.equals(featName, ignoreCase = true) }
                             val subtitle = featData?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" }
-                            
+
                             ExpandableItemCard(
                                 name = featData?.name ?: featName,
                                 subtitle = subtitle,
                                 description = featData?.description ?: "",
                                 onRemove = {
-                                    val updatedFeats = character.feats.toMutableList().apply { remove(featName) }
+                                    val updatedFeats = character.feats - featName
                                     viewModel.updateCharacter(character.copy(feats = updatedFeats))
                                 }
                             )
@@ -369,7 +366,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
                             items(character.toolProficiencies) { toolName ->
                                 val toolData = toolsDict[toolName] ?: toolsDict.values.find { it.name.equals(toolName, ignoreCase = true) }
                                 val subtitle = toolData?.category?.takeIf { it.isNotBlank() }?.let { "Category: $it" } ?: "Category: Tool"
-                                
+
                                 ExpandableItemCard(
                                     name = toolData?.name ?: toolName,
                                     subtitle = subtitle,
@@ -481,9 +478,18 @@ fun ExpandableItemCard(
                         Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                     }
                 }
-                if (onRemove != null) {
-                    IconButton(onClick = onRemove) {
-                        Icon(Icons.Default.Delete, contentDescription = "Remove", tint = SithRed)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (description.isNotBlank()) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (expanded) "Collapse" else "Expand",
+                            tint = HoloBlue
+                        )
+                    }
+                    if (onRemove != null) {
+                        IconButton(onClick = onRemove) {
+                            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = SithRed)
+                        }
                     }
                 }
             }

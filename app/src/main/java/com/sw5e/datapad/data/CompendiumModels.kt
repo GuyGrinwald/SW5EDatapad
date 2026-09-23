@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class CompendiumResponse(val compendium: CompendiumData)
 
 data class CompendiumData(
+    val skills: List<SkillDefinition> = emptyList(),
     val feats: List<FeatDefinition> = emptyList(),
     val fightingStyles: List<FightingStyleDefinition> = emptyList(),
     val fightingMasteries: List<FightingMasteryDefinition> = emptyList(),
@@ -14,6 +15,11 @@ data class CompendiumData(
     val tools: List<ToolDefinition> = emptyList(),  
     val armor: List<ArmorProficiency> = emptyList(),
     val weapons: List<WeaponProficiency> = emptyList()
+)
+
+data class SkillDefinition(
+    val name: String = "",
+    val attribute: String = ""
 )
 
 data class FeatDefinition(

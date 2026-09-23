@@ -29,8 +29,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _character = MutableStateFlow(CharacterEntity())
     val character: StateFlow<CharacterEntity> = _character
 
-    private val _skills = MutableStateFlow<List<CharacterSkillEntity>>(emptyList())
-    val skills: StateFlow<List<CharacterSkillEntity>> = _skills
+    private val _compendiumSkills = MutableStateFlow<List<SkillDefinition>>(emptyList())
 
     private val _lastRoll = MutableStateFlow<RollResult?>(null)
     val lastRoll: StateFlow<RollResult?> = _lastRoll
@@ -89,6 +88,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val reader = InputStreamReader(stream)
             val response = Gson().fromJson(reader, CompendiumResponse::class.java)
             
+            val compendiumSkills = response?.compendium?.skills ?: emptyList()
             val feats = response?.compendium?.feats ?: emptyList()
             val force = response?.compendium?.forcePowers ?: emptyList()
             val tech = response?.compendium?.techPowers ?: emptyList()
@@ -99,6 +99,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val armorProfs = response?.compendium?.armor ?: emptyList()
             val weaponProfs = response?.compendium?.weapons ?: emptyList()
 
+            _compendiumSkills.value = compendiumSkills
             _featsDictionary.value = feats.associateBy { it.name }
             _forcePowersDictionary.value = force.associateBy { it.name }
             _techPowersDictionary.value = tech.associateBy { it.name }
@@ -132,7 +133,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 level = level,
                 species = species,
                 characterClass = className,
-                skills = SeedData.defaultSkills
+                skills = getDefaultSkillsFromCompendium()
             )
             dao.insertCharacter(newEntity)
         }
@@ -161,7 +162,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 species = character.species,
                 characterClass = character.className,
                 level = character.level,
-                skills = SeedData.defaultSkills
+                skills = getDefaultSkillsFromCompendium()
             )
             
             if (existingCharacter == null) {
@@ -195,13 +196,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun getDefaultSkillsFromCompendium(): List<CharacterSkillEntity> {
+        return _compendiumSkills.value.map {
+            CharacterSkillEntity(
+                skillName = it.name,
+                associatedAttribute = it.attribute
+            )
+        }
+    }
+
     fun updateSkill(updatedSkill: CharacterSkillEntity) {
         val currentCharacter = _character.value
-        // Replace the old skill with the updated one in the list
         val updatedSkills = currentCharacter.skills.map { 
             if (it.skillName == updatedSkill.skillName) updatedSkill else it 
         }
-        // Save the entire character entity back to the single table
+        // Updating _character will trigger UI recomposition automatically
         updateCharacter(currentCharacter.copy(skills = updatedSkills))
     }
     
@@ -424,52 +433,89 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val c = _character.value
                 val json = JSONObject().apply {
-                    put("name", c.name); put("species", c.species); put("class", c.characterClass)
-                    put("level", c.level); put("speed", c.speed)
+                    put("id", c.id)
+                    put("name", c.name)
+                    put("species", c.species)
+                    put("class", c.characterClass)
+                    put("characterClass", c.characterClass)
+                    put("level", c.level)
+                    put("speed", c.speed)
                     put("str", c.str); put("dex", c.dex); put("con", c.con)
                     put("intStat", c.intStat); put("wis", c.wis); put("cha", c.cha)
                     
                     put("saveProfStr", c.saveProfStr); put("saveProfDex", c.saveProfDex); put("saveProfCon", c.saveProfCon)
                     put("saveProfInt", c.saveProfInt); put("saveProfWis", c.saveProfWis); put("saveProfCha", c.saveProfCha)
 
-                    put("currentHp", c.currentHp); put("maxHp", c.maxHp); put("tempHp", c.tempHp); put("acOverride", c.armorClassOverride)
+                    put("currentHp", c.currentHp); put("maxHp", c.maxHp); put("tempHp", c.tempHp)
+                    put("acOverride", c.armorClassOverride)
+                    put("armorClassOverride", c.armorClassOverride)
                     put("armorBase", c.armorBase); put("dexCap", c.dexCap); put("isArmorProficient", c.isArmorProficient); put("shieldBonus", c.shieldBonus)
-                    put("hitDieSpent", c.hitDieSpent); put("hitDiceCount", c.hitDieMaximum)
+                    put("hitDieSpent", c.hitDieSpent)
+                    put("hitDiceCount", c.hitDieMaximum)
+                    put("hitDieMaximum", c.hitDieMaximum)
                     put("credits", c.credits)
-                    put("techPoints", c.currentTechPoints); put("maxTechPoints", c.maxTechPoints)
-                    put("forcePoints", c.currentForcePoints); put("maxForcePoints", c.maxForcePoints)
+                    put("techPoints", c.currentTechPoints)
+                    put("currentTechPoints", c.currentTechPoints)
+                    put("maxTechPoints", c.maxTechPoints)
+                    put("forcePoints", c.currentForcePoints)
+                    put("currentForcePoints", c.currentForcePoints)
+                    put("maxForcePoints", c.maxForcePoints)
                     
                     put("resistances", JSONArray(c.resistances))
                     put("immunities", JSONArray(c.immunities))
+
                     val equipmentArray = JSONArray()
                     c.equipment.forEach { item ->
-                        val itemObj = JSONObject().apply {
+                        equipmentArray.put(JSONObject().apply {
                             put("name", item.name)
                             put("type", item.type)
                             put("isEquipped", item.isEquipped)
                             put("cr", item.cr)
                             put("weight", item.weight)
                             put("quantity", item.quantity)
-                        }
-                        equipmentArray.put(itemObj)}
+                        })
+                    }
                     put("equipment", equipmentArray)
+
                     put("toolProficiencies", JSONArray(c.toolProficiencies))
                     put("armorProficiencies", JSONArray(c.armorProficiencies))
                     put("weaponProficiencies", JSONArray(c.weaponProficiencies))
                     put("feats", JSONArray(c.feats))
-                    put("skills", JSONArray(c.skills))
 
-                    val forceJson = JSONObject(); c.forcePowers.forEach { (k, v) -> forceJson.put(k.toString(), JSONArray(v)) }; put("forcePowers", forceJson)
-                    val techJson = JSONObject(); c.techPowers.forEach { (k, v) -> techJson.put(k.toString(), JSONArray(v)) }; put("techPowers", techJson)
+                    val skillsArray = JSONArray()
+                    c.skills.forEach { skill ->
+                        skillsArray.put(JSONObject().apply {
+                            put("skillName", skill.skillName)
+                            put("associatedAttribute", skill.associatedAttribute)
+                            put("proficiencyLevel", skill.proficiencyLevel)
+                            put("manualOverride", skill.manualOverride)
+                        })
+                    }
+                    put("skills", skillsArray)
+
+                    val forceJson = JSONObject()
+                    c.forcePowers.forEach { (k, v) -> forceJson.put(k.toString(), JSONArray(v)) }
+                    put("forcePowers", forceJson)
+
+                    val techJson = JSONObject()
+                    c.techPowers.forEach { (k, v) -> techJson.put(k.toString(), JSONArray(v)) }
+                    put("techPowers", techJson)
 
                     put("fightingStyles", JSONArray(c.fightingStyles))
                     put("fightingMasteries", JSONArray(c.fightingMasteries))
                     put("lightsaberForms", JSONArray(c.lightsaberForms))
                 }
-                context.contentResolver.openOutputStream(uri)?.use {
-                    it.write(json.toString(4).toByteArray())
+
+                // Mode "w" truncates existing files cleanly across all storage providers
+                context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
+                    outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+                        writer.write(json.toString(4))
+                        writer.flush()
+                    }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { 
+                e.printStackTrace() 
+            }
         }
     }
 
@@ -489,8 +535,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val mapObj = obj.optJSONObject(key) ?: return emptyMap()
                         val result = mutableMapOf<Int, List<String>>()
                         mapObj.keys().forEach { k ->
-                            val arr = mapObj.optJSONArray(k)
-                            if (arr != null) result[k.toInt()] = List(arr.length()) { arr.getString(it) }
+                            val level = k.toIntOrNull()
+                            if (level != null) {
+                                val arr = mapObj.optJSONArray(k)
+                                if (arr != null) result[level] = List(arr.length()) { arr.getString(it) }
+                            }
                         }
                         return result
                     }
@@ -503,8 +552,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             if (itemObj != null) {
                                 list.add(
                                     CharacterSkillEntity(
-                                        skillName = itemObj.optString("skillName", ""),
-                                        associatedAttribute = itemObj.optString("associatedAttribute", ""),
+                                        skillName = itemObj.optString("skillName", itemObj.optString("name", "")),
+                                        associatedAttribute = itemObj.optString("associatedAttribute", itemObj.optString("attribute", "")),
                                         proficiencyLevel = itemObj.optInt("proficiencyLevel", 0),
                                         manualOverride = itemObj.optInt("manualOverride", 0)
                                     )
@@ -531,7 +580,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                     )
                                 )
                             } else {
-                                // Fallback for older JSON backups that might still use plain strings
                                 val strVal = arr.optString(i, "")
                                 if (strVal.isNotBlank()) {
                                     list.add(EquipmentItem(name = strVal))
@@ -542,20 +590,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     val updated = _character.value.copy(
-                        name = obj.optString("name", "Unknown"), species = obj.optString("species", "Human"), characterClass = obj.optString("class", "Fighter"),
-                        level = obj.optInt("level", 1), speed = obj.optInt("speed", 30),
+                        id = obj.optString("id", _character.value.id.ifBlank { UUID.randomUUID().toString() }),
+                        name = obj.optString("name", "Unknown"), 
+                        species = obj.optString("species", "Human"), 
+                        characterClass = obj.optString("characterClass", obj.optString("class", "Fighter")),
+                        level = obj.optInt("level", 1), 
+                        speed = obj.optInt("speed", 30),
                         str = obj.optInt("str", 10), dex = obj.optInt("dex", 10), con = obj.optInt("con", 10),
-                        intStat = obj.optInt("intStat", 10), wis = obj.optInt("wis", 10), cha = obj.optInt("cha", 10),
+                        intStat = obj.optInt("intStat", obj.optInt("int", 10)), wis = obj.optInt("wis", 10), cha = obj.optInt("cha", 10),
                         
                         saveProfStr = obj.optBoolean("saveProfStr", false), saveProfDex = obj.optBoolean("saveProfDex", false), saveProfCon = obj.optBoolean("saveProfCon", false),
                         saveProfInt = obj.optBoolean("saveProfInt", false), saveProfWis = obj.optBoolean("saveProfWis", false), saveProfCha = obj.optBoolean("saveProfCha", false),
                         
-                        currentHp = obj.optInt("currentHp", 10), maxHp = obj.optInt("maxHp", 10), tempHp = obj.optInt("tempHp", 0), armorClassOverride = obj.optInt("acOverride", 0),
+                        currentHp = obj.optInt("currentHp", 10), maxHp = obj.optInt("maxHp", 10), tempHp = obj.optInt("tempHp", 0),
+                        armorClassOverride = obj.optInt("armorClassOverride", obj.optInt("acOverride", 0)),
                         armorBase = obj.optInt("armorBase", 10), dexCap = obj.optInt("dexCap", 99), isArmorProficient = obj.optBoolean("isArmorProficient", true), shieldBonus = obj.optInt("shieldBonus", 0),
-                        hitDieSpent = obj.optInt("hitDieSpent", 0), hitDieMaximum = obj.optInt("hitDiceCount", 1),
+                        hitDieSpent = obj.optInt("hitDieSpent", 0), hitDieMaximum = obj.optInt("hitDieMaximum", obj.optInt("hitDiceCount", 1)),
                         credits = obj.optInt("credits", 0),
-                        currentTechPoints = obj.optInt("techPoints", 0), maxTechPoints = obj.optInt("maxTechPoints", 0),
-                        currentForcePoints = obj.optInt("forcePoints", 0), maxForcePoints = obj.optInt("maxForcePoints", 0),
+                        currentTechPoints = obj.optInt("currentTechPoints", obj.optInt("techPoints", 0)), maxTechPoints = obj.optInt("maxTechPoints", 0),
+                        currentForcePoints = obj.optInt("currentForcePoints", obj.optInt("forcePoints", 0)), maxForcePoints = obj.optInt("maxForcePoints", 0),
 
                         resistances = parseStringList("resistances"),
                         immunities = parseStringList("immunities"),
@@ -583,15 +636,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         className = updated.characterClass
                     )
                     
-                    // Add imported character to roster if it doesn't exist
                     addCharacterToRoster(rosterChar)
-                    
-                    // Automatically mark it as selected character across all screens
                     _selectedCharacter.value = rosterChar
-                    
                     updateCharacter(updated)
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { 
+                e.printStackTrace() 
+            }
         }
     }
 }

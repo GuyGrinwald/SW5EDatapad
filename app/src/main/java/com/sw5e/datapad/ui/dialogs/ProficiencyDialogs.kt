@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.sw5e.datapad.data.CharacterSkillEntity
 import com.sw5e.datapad.data.ArmorProficiency
+import com.sw5e.datapad.data.CharacterSkillEntity
 import com.sw5e.datapad.data.FeatDefinition
 import com.sw5e.datapad.data.ToolDefinition
 import com.sw5e.datapad.data.WeaponProficiency
@@ -84,8 +84,7 @@ fun FeatAddDialog(
     var searchQuery by remember { mutableStateOf("") }
     var viewingFeat by remember { mutableStateOf<FeatDefinition?>(null) }
 
-    if (viewingFeat != null) {
-        val feat = viewingFeat!!
+    viewingFeat?.let { feat ->
         val featName = feat.name
         AlertDialog(
             onDismissRequest = { viewingFeat = null },
@@ -125,7 +124,7 @@ fun FeatAddDialog(
     }
 
     val availableFeats = featsDict.values.filter { feat ->
-        val name = feat.name ?: return@filter false
+        val name = feat.name
         name !in currentFeats && name.contains(searchQuery, ignoreCase = true)
     }
 
@@ -160,7 +159,7 @@ fun FeatAddDialog(
                             colors = CardDefaults.cardColors(containerColor = SpaceBlack)
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Text(feat.name ?: "", fontWeight = FontWeight.Bold, color = HoloBlue)
+                                Text(feat.name, fontWeight = FontWeight.Bold, color = HoloBlue)
                                 val prereq = feat.prerequisite
                                 if (!prereq.isNullOrBlank()) {
                                     Text("Prereq: $prereq", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
@@ -188,8 +187,7 @@ fun ToolProficiencyAddDialog(
     var searchQuery by remember { mutableStateOf("") }
     var viewingTool by remember { mutableStateOf<ToolDefinition?>(null) }
 
-    if (viewingTool != null) {
-        val tool = viewingTool!!
+    viewingTool?.let { tool ->
         val toolName = tool.name
         AlertDialog(
             onDismissRequest = { viewingTool = null },
@@ -229,7 +227,7 @@ fun ToolProficiencyAddDialog(
     }
 
     val availableTools = toolsDict.values.filter { tool ->
-        val name = tool.name ?: return@filter false
+        val name = tool.name
         name !in currentTools && name.contains(searchQuery, ignoreCase = true)
     }
 
@@ -288,8 +286,8 @@ fun ToolProficiencyAddDialog(
 
 @Composable
 fun AddArmorWeaponProficiencyDialog(
-    armorDict: Map<String, *>,
-    weaponDict: Map<String, *>,
+    armorDict: Map<String, ArmorProficiency>,
+    weaponDict: Map<String, WeaponProficiency>,
     currentArmor: List<String>,
     currentWeapons: List<String>,
     onDismiss: () -> Unit,
@@ -303,7 +301,7 @@ fun AddArmorWeaponProficiencyDialog(
     val standardWeaponCategories = listOf(
         "Simple Blasters", "Martial Blasters",
         "Simple Vibroweapons", "Martial Vibroweapons",
-        "Simple Lightweapons", "Martial Lightweapons",
+        "Simple Lightweapons", "Martial Lightweapons"
     )
 
     val allOptions = remember(armorDict, weaponDict, currentArmor, currentWeapons) {
@@ -322,8 +320,8 @@ fun AddArmorWeaponProficiencyDialog(
         }
 
         armorDict.forEach { (key, item) ->
-            val name = item?.let { runCatching { it.javaClass.getMethod("getName").invoke(it) as? String }.getOrNull() } ?: key
-            val category = item?.let { runCatching { it.javaClass.getMethod("getCategory").invoke(it) as? String }.getOrNull() } ?: "Armor"
+            val name = item.name.ifBlank { key }
+            val category = item.category.ifBlank { "Armor" }
 
             if (!currentArmor.contains(key) && !currentArmor.contains(name) && !options.any { it.name.equals(name, ignoreCase = true) }) {
                 options.add(ProficiencyOption(id = key, name = name, category = category, isArmor = true))
@@ -331,8 +329,8 @@ fun AddArmorWeaponProficiencyDialog(
         }
 
         weaponDict.forEach { (key, item) ->
-            val name = item?.let { runCatching { it.javaClass.getMethod("getName").invoke(it) as? String }.getOrNull() } ?: key
-            val category = item?.let { runCatching { it.javaClass.getMethod("getCategory").invoke(it) as? String }.getOrNull() } ?: "Weapon"
+            val name = item.name.ifBlank { key }
+            val category = item.category.ifBlank { "Weapon" }
 
             if (!currentWeapons.contains(key) && !currentWeapons.contains(name) && !options.any { it.name.equals(name, ignoreCase = true) }) {
                 options.add(ProficiencyOption(id = key, name = name, category = category, isArmor = false))

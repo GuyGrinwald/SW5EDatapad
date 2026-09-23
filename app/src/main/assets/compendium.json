@@ -1,5 +1,26 @@
 {
   "compendium": {
+    "skills": [
+      { "name": "Acrobatics", "attribute": "DEX" },
+      { "name": "Animal Handling", "attribute": "WIS" },
+      { "name": "Athletics", "attribute": "STR" },
+      { "name": "Deception", "attribute": "CHA" },
+      { "name": "History", "attribute": "INT" },
+      { "name": "Insight", "attribute": "WIS" },
+      { "name": "Intimidation", "attribute": "CHA" },
+      { "name": "Investigation", "attribute": "INT" },
+      { "name": "Lore", "attribute": "INT" },
+      { "name": "Medicine", "attribute": "WIS" },
+      { "name": "Nature", "attribute": "INT" },
+      { "name": "Perception", "attribute": "WIS" },
+      { "name": "Performance", "attribute": "CHA" },
+      { "name": "Persuasion", "attribute": "CHA" },
+      { "name": "Piloting", "attribute": "INT" },
+      { "name": "Sleight of Hand", "attribute": "DEX" },
+      { "name": "Stealth", "attribute": "DEX" },
+      { "name": "Survival", "attribute": "WIS" },
+      { "name": "Technology", "attribute": "INT" }
+    ],
     "feats": [
       {
         "name": "Ace Pilot",
