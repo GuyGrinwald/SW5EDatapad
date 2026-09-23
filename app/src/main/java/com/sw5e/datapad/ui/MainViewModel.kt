@@ -61,12 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _weaponDictionary = MutableStateFlow<Map<String, WeaponProficiency>>(emptyMap())
     val weaponDictionary: StateFlow<Map<String, WeaponProficiency>> = _weaponDictionary
 
-    private val _characters = MutableStateFlow<List<Character>>(
-        listOf(
-            Character(id = UUID.randomUUID().toString(), name = "Jax Vane", level = 5, species = "Human", className = "Scout"),
-            Character(id = UUID.randomUUID().toString(), name = "K-40", level = 4, species = "Droid", className = "Engineer")
-        )
-    )
+    private val _characters = MutableStateFlow<List<Character>>(emptyList())
     val characters: StateFlow<List<Character>> = _characters.asStateFlow()
 
     private val _selectedCharacter = MutableStateFlow<Character?>(null)
@@ -79,6 +74,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Fetch all existing characters from Room database on startup
+            val savedEntities = dao.getAllCharacters()
+            val rosterList = savedEntities.map { entity ->
+                Character(
+                    id = entity.id,
+                    name = entity.name,
+                    level = entity.level,
+                    species = entity.species,
+                    className = entity.characterClass
+                )
+            }
+            _characters.value = rosterList
         }
     }
 
@@ -146,6 +153,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_selectedCharacter.value?.id == character.id) {
             _selectedCharacter.value = null
             _character.value = CharacterEntity(name = "", species = "", characterClass = "")
+        }
+
+        // Delete from Room Database
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteCharacterById(character.id)
         }
     }
 

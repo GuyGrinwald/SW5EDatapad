@@ -6,11 +6,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CharacterDao {
+    @Query("SELECT * FROM character_sheet")
+    suspend fun getAllCharacters(): List<CharacterEntity>
+
     @Query("SELECT * FROM character_sheet WHERE id = :characterId LIMIT 1")
     suspend fun getCharacterById(characterId: String): CharacterEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCharacter(character: CharacterEntity)
+
+    @Query("DELETE FROM character_sheet WHERE id = :characterId")
+    suspend fun deleteCharacterById(characterId: String)
 }
 
 @Database(entities = [CharacterEntity::class], version = 1, exportSchema = false)
