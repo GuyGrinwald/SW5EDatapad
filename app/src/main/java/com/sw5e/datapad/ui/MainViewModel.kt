@@ -275,8 +275,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (c.armorClassOverride > 0) return c.armorClassOverride
         val dexMod = getAttributeModifier(c.dex)
         val effectiveDex = minOf(dexMod, c.dexCap)
-        val prof = if (c.isArmorProficient) getProficiencyBonus() else 0
-        return c.armorBase + effectiveDex + prof + c.shieldBonus
+        return c.armorBase + effectiveDex + c.shieldBonus
     }
 
     fun getProficiencyBonus() = 1 + kotlin.math.ceil(_character.value.level / 4.0).toInt()

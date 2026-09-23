@@ -75,7 +75,6 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
             onDismiss = { showAddToolDialog = false },
             onAdd = { tool ->
                 viewModel.addToolProficiency(tool)
-                // Kept open on add so user can continue adding tools
             }
         )
     }
@@ -209,7 +208,17 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column {
-                                        Text(skill.skillName, fontWeight = FontWeight.Bold)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(skill.skillName, fontWeight = FontWeight.Bold)
+                                            if (skill.proficiencyLevel == 1) {
+                                                Text("(Proficient)", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
+                                            } else if (skill.proficiencyLevel == 2) {
+                                                Text("(Expertise)", style = MaterialTheme.typography.labelSmall, color = HoloBlue)
+                                            }
+                                        }
                                         Text(
                                             skill.associatedAttribute,
                                             style = MaterialTheme.typography.labelSmall,
