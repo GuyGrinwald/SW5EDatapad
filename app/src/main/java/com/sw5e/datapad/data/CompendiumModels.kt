@@ -26,7 +26,8 @@ data class PowerDefinition(
     val name: String,
     val level: String = "At-will",
     val type: String = "", // "Light Side" or "Dark Side" or "Tech"
-    @SerializedName("casting time") val castingTime: String? = "",
+    @SerializedName("casting time")
+    val castingTime: String? = "",
     val range: String = "",
     val duration: String = "",
     val description: String = ""

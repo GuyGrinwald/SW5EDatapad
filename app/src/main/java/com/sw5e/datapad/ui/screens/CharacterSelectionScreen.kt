@@ -29,7 +29,7 @@ data class Character(
 @Composable
 fun CharacterSelectionScreen(
     characters: List<Character>,
-    onImportCharacter: () -> Unit,
+    onCreateNewCharacter: () -> Unit,
     onOpenCharacter: (Character) -> Unit,
     onDeleteCharacter: (Character) -> Unit
 ) {
@@ -43,7 +43,7 @@ fun CharacterSelectionScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onImportCharacter,
+                onClick = onCreateNewCharacter,
                 containerColor = NeonAmber,
                 contentColor = SpaceBlack
             ) {

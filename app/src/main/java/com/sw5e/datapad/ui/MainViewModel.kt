@@ -73,66 +73,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedCharacter = MutableStateFlow<Character?>(null)
     val selectedCharacter: StateFlow<Character?> = _selectedCharacter.asStateFlow()
 
-    fun importCharacter(name: String, level: Int, species: String, className: String) {
-        val newChar = Character(
-            id = UUID.randomUUID().toString(),
-            name = name,
-            level = level,
-            species = species,
-            className = className
-        )
-        _characters.value = _characters.value + newChar
-        viewModelScope.launch(Dispatchers.IO) {
-            ensureSkillsSeeded(newChar.id)
-        }
-    }
-
-    fun updateRosterCharacter(updatedChar: Character) {
-        _characters.value = _characters.value.map { 
-            if (it.id == updatedChar.id) updatedChar else it 
-        }
-    }
-
-    fun deleteCharacter(character: Character) {
-        _characters.value = _characters.value.filter { it.id != character.id }
-        
-        // If the deleted character was the active one, clear everything out
-        if (_selectedCharacter.value?.id == character.id) {
-            _selectedCharacter.value = null
-            _character.value = CharacterEntity(name = "", species = "", characterClass = "")
-            _skills.value = emptyList()
-        }
-    }
-
-    fun selectCharacter(character: Character) {
-        _selectedCharacter.value = character
-        
-        viewModelScope.launch(Dispatchers.IO) {
-            // 1. Load or initialize full CharacterEntity
-            var fullCharacter = dao.getCharacterById(character.id)
-            if (fullCharacter == null) {
-                fullCharacter = CharacterEntity(
-                    id = character.id,
-                    name = character.name,
-                    species = character.species,
-                    characterClass = character.className,
-                    level = character.level
-                )
-                dao.insertCharacter(fullCharacter)
-            }
-            _character.value = fullCharacter
-
-            // 2. Load skills specifically tied to this character ID
-            _skills.value = ensureSkillsSeeded(character.id)
-        }
-    }
-
-    fun clearSelectedCharacter() {
-        _selectedCharacter.value = null
-        _character.value = CharacterEntity() // Reset active character data
-        _skills.value = emptyList()
-    }
-
     init { 
         loadData()
         loadCompendium()
@@ -173,16 +113,71 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun ensureSkillsSeeded(characterId: String): List<CharacterSkillEntity> {
-        var storedSkills = dao.getSkillsForCharacter(characterId).first()
-        if (storedSkills.isEmpty()) {
-            val defaultSkillsWithId = SeedData.defaultSkills.map { 
-                it.copy(characterId = characterId) 
-            }
-            dao.insertSkills(defaultSkillsWithId)
-            storedSkills = dao.getSkillsForCharacter(characterId).first()
+    fun createNewCharacter(name: String, level: Int, species: String, className: String) {
+        val newId = UUID.randomUUID().toString()
+        val newChar = Character(
+            id = newId,
+            name = name,
+            level = level,
+            species = species,
+            className = className
+        )
+
+       addCharacterToRoster(newChar)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val newEntity = CharacterEntity(
+                id = newId,
+                name = name,
+                level = level,
+                species = species,
+                characterClass = className,
+                skills = SeedData.defaultSkills
+            )
+            dao.insertCharacter(newEntity)
         }
-        return storedSkills
+    }
+
+    fun deleteCharacter(character: Character) {
+        _characters.value = _characters.value.filter { it.id != character.id }
+        
+        // If the deleted character was the active one, clear everything out
+        if (_selectedCharacter.value?.id == character.id) {
+            _selectedCharacter.value = null
+            _character.value = CharacterEntity(name = "", species = "", characterClass = "")
+        }
+    }
+
+    fun selectCharacter(character: Character) {
+        _selectedCharacter.value = character
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val existingCharacter = dao.getCharacterById(character.id)
+            
+            // Use existing character data if present; otherwise, initialize defaults
+            val fullCharacter = existingCharacter ?: CharacterEntity(
+                id = character.id,
+                name = character.name,
+                species = character.species,
+                characterClass = character.className,
+                level = character.level,
+                skills = SeedData.defaultSkills
+            )
+            
+            if (existingCharacter == null) {
+                dao.insertCharacter(fullCharacter)
+            }
+            
+            _character.value = fullCharacter
+        }
+    }
+
+    fun addCharacterToRoster(character: Character) {
+        // Check if character already exists in the roster
+        val exists = _characters.value.any { it.id == character.id }
+        if (!exists) {
+            _characters.value = _characters.value + character
+        }
     }
 
     fun updateCharacter(updated: CharacterEntity) {
@@ -197,15 +192,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertCharacter(updated)
-            ensureSkillsSeeded(updated.id)
         }
     }
 
-    fun updateSkill(skill: CharacterSkillEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.updateSkill(skill)
-            _skills.value = dao.getSkillsForCharacter(skill.characterId).first()
+    fun updateSkill(updatedSkill: CharacterSkillEntity) {
+        val currentCharacter = _character.value
+        // Replace the old skill with the updated one in the list
+        val updatedSkills = currentCharacter.skills.map { 
+            if (it.skillName == updatedSkill.skillName) updatedSkill else it 
         }
+        // Save the entire character entity back to the single table
+        updateCharacter(currentCharacter.copy(skills = updatedSkills))
     }
     
     fun updateClass(newClass: String) {
@@ -460,9 +457,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("armorProficiencies", JSONArray(c.armorProficiencies))
                     put("weaponProficiencies", JSONArray(c.weaponProficiencies))
                     put("feats", JSONArray(c.feats))
+                    put("skills", JSONArray(c.skills))
 
                     val forceJson = JSONObject(); c.forcePowers.forEach { (k, v) -> forceJson.put(k.toString(), JSONArray(v)) }; put("forcePowers", forceJson)
                     val techJson = JSONObject(); c.techPowers.forEach { (k, v) -> techJson.put(k.toString(), JSONArray(v)) }; put("techPowers", techJson)
+
+                    put("fightingStyles", JSONArray(c.fightingStyles))
+                    put("fightingMasteries", JSONArray(c.fightingMasteries))
+                    put("lightsaberForms", JSONArray(c.lightsaberForms))
                 }
                 context.contentResolver.openOutputStream(uri)?.use {
                     it.write(json.toString(4).toByteArray())
@@ -491,6 +493,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             if (arr != null) result[k.toInt()] = List(arr.length()) { arr.getString(it) }
                         }
                         return result
+                    }
+
+                    fun parseSkillsList(key: String): List<CharacterSkillEntity> {
+                        val arr = obj.optJSONArray(key) ?: return emptyList()
+                        val list = mutableListOf<CharacterSkillEntity>()
+                        for (i in 0 until arr.length()) {
+                            val itemObj = arr.optJSONObject(i)
+                            if (itemObj != null) {
+                                list.add(
+                                    CharacterSkillEntity(
+                                        skillName = itemObj.optString("skillName", ""),
+                                        associatedAttribute = itemObj.optString("associatedAttribute", ""),
+                                        proficiencyLevel = itemObj.optInt("proficiencyLevel", 0),
+                                        manualOverride = itemObj.optInt("manualOverride", 0)
+                                    )
+                                )
+                            }
+                        }
+                        return list
                     }
 
                     fun parseEquipmentList(key: String): List<EquipmentItem> {
@@ -538,13 +559,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                         resistances = parseStringList("resistances"),
                         immunities = parseStringList("immunities"),
-                        equipment = parseEquipmentList("equipment"),
                         toolProficiencies = parseStringList("toolProficiencies"),
                         armorProficiencies = parseStringList("armorProficiencies"),
                         weaponProficiencies = parseStringList("weaponProficiencies"),
                         feats = parseStringList("feats"),
+                        skills = parseSkillsList("skills"),
+
+                        fightingStyles = parseStringList("fightingStyles"),
+                        fightingMasteries = parseStringList("fightingMasteries"),
+                        lightsaberForms = parseStringList("lightsaberForms"),
+
                         forcePowers = parseMap("forcePowers"),
-                        techPowers = parseMap("techPowers")
+                        techPowers = parseMap("techPowers"),
+
+                        equipment = parseEquipmentList("equipment"),
                     )
                     
                     val rosterChar = Character(
@@ -556,17 +584,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     
                     // Add imported character to roster if it doesn't exist
-                    if (_characters.value.none { it.id == updated.id }) {
-                        _characters.value = _characters.value + rosterChar
-                    }
+                    addCharacterToRoster(rosterChar)
                     
                     // Automatically mark it as selected character across all screens
                     _selectedCharacter.value = rosterChar
                     
                     updateCharacter(updated)
-                    
-                    // Trigger skills refresh for this character
-                    _skills.value = ensureSkillsSeeded(updated.id)
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }

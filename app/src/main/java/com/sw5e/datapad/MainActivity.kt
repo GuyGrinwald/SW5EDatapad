@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                         when (effectiveTab) {
                             0 -> CharacterSelectionScreen(
                                 characters = characters,
-                                onImportCharacter = { viewModel.importCharacter("New Recruit", 1, "Human", "Soldier") },
+                                onCreateNewCharacter = { viewModel.createNewCharacter("New Recruit", 1, "Human", "Soldier") },
                                 onOpenCharacter = { character ->
                                     viewModel.selectCharacter(character)
                                     selectedTab = 1

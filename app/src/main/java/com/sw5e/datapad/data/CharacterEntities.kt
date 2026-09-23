@@ -20,6 +20,10 @@ data class CharacterEntity(
     val intStat: Int = 10,
     val wis: Int = 10,
     val cha: Int = 10,
+
+    // Skills and Proficiencies
+    val skills: List<CharacterSkillEntity> = emptyList(),
+    val toolProficiencies: List<String> = emptyList(),
     
     // Saving Throw Proficiencies
     val saveProfStr: Boolean = false,
@@ -68,8 +72,7 @@ data class CharacterEntity(
     // Feats, Traits, and other features can be added here as needed
     val feats: List<String> = emptyList(),
 
-    // Proficiencies
-    val toolProficiencies: List<String> = emptyList(),
+    // Combat Proficiencies
     val fightingStyles: List<String> = emptyList(),
     val fightingMasteries: List<String> = emptyList(),
     val lightsaberForms: List<String> = emptyList(),
@@ -78,9 +81,7 @@ data class CharacterEntity(
     val equipment: List<EquipmentItem> = emptyList(),
 )
 
-@Entity(tableName = "character_skills", primaryKeys = ["characterId", "skillName"])
 data class CharacterSkillEntity(
-    val characterId: String = "",
     val skillName: String,
     val associatedAttribute: String,
     val proficiencyLevel: Int = 0, // 0=None, 1=Proficient, 2=Expertise

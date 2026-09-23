@@ -55,4 +55,16 @@ class Converters {
         val type = object : TypeToken<List<ArmorProficiency>>() {}.type
         return gson.fromJson(value, type) ?: emptyList()
     }
+
+    // --- List<CharacterSkillEntity> Converters ---
+    @TypeConverter
+    fun fromSkillList(value: List<CharacterSkillEntity>?): String = 
+        gson.toJson(value ?: emptyList<CharacterSkillEntity>())
+
+    @TypeConverter
+    fun toSkillList(value: String?): List<CharacterSkillEntity> {
+        if (value.isNullOrEmpty()) return emptyList()
+        val type = object : TypeToken<List<CharacterSkillEntity>>() {}.type
+        return gson.fromJson(value, type) ?: emptyList()
+    }
 }

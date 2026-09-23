@@ -86,7 +86,7 @@ fun FeatAddDialog(
 
     if (viewingFeat != null) {
         val feat = viewingFeat!!
-        val featName = feat.name ?: ""
+        val featName = feat.name
         AlertDialog(
             onDismissRequest = { viewingFeat = null },
             title = { Text(featName, color = HoloBlue, fontWeight = FontWeight.Bold) },
@@ -190,7 +190,7 @@ fun ToolProficiencyAddDialog(
 
     if (viewingTool != null) {
         val tool = viewingTool!!
-        val toolName = tool.name ?: ""
+        val toolName = tool.name
         AlertDialog(
             onDismissRequest = { viewingTool = null },
             title = { Text(toolName, color = HoloBlue, fontWeight = FontWeight.Bold) },
@@ -202,12 +202,12 @@ fun ToolProficiencyAddDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val category = tool.category ?: ""
+                    val category = tool.category
                     if (category.isNotBlank()) {
                         Text("Category: $category", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                     }
                     Text("Description:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = HoloBlue)
-                    Text(tool.description ?: "", style = MaterialTheme.typography.bodyMedium)
+                    Text(tool.description, style = MaterialTheme.typography.bodyMedium)
                 }
             },
             confirmButton = {
@@ -265,12 +265,12 @@ fun ToolProficiencyAddDialog(
                             colors = CardDefaults.cardColors(containerColor = SpaceBlack)
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Text(tool.name ?: "", fontWeight = FontWeight.Bold, color = HoloBlue)
-                                val category = tool.category ?: ""
+                                Text(tool.name, fontWeight = FontWeight.Bold, color = HoloBlue)
+                                val category = tool.category
                                 if (category.isNotBlank()) {
                                     Text(category, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                                 }
-                                val desc = tool.description ?: ""
+                                val desc = tool.description
                                 if (desc.isNotBlank()) {
                                     Text(desc, style = MaterialTheme.typography.bodySmall, maxLines = 2)
                                 }
@@ -299,12 +299,11 @@ fun AddArmorWeaponProficiencyDialog(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableIntStateOf(0) } // 0: All, 1: Armor, 2: Weapons
 
-    val standardArmorCategories = listOf("Light Armor", "Medium Armor", "Heavy Armor", "Shields", "All Armor")
+    val standardArmorCategories = listOf("Light Armor", "Medium Armor", "Heavy Armor", "Shields")
     val standardWeaponCategories = listOf(
         "Simple Blasters", "Martial Blasters",
         "Simple Vibroweapons", "Martial Vibroweapons",
         "Simple Lightweapons", "Martial Lightweapons",
-        "All Weapons"
     )
 
     val allOptions = remember(armorDict, weaponDict, currentArmor, currentWeapons) {

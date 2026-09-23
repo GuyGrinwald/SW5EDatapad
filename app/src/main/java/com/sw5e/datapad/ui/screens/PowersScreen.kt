@@ -114,7 +114,6 @@ fun PowersScreen(viewModel: MainViewModel) {
                     map[powerLevel] = list
                     viewModel.updateCharacter(character.copy(forcePowers = map))
                 }
-                // Removed closing dialog here so the modal stays open for more adding
             }
         )
     }
@@ -133,7 +132,6 @@ fun PowersScreen(viewModel: MainViewModel) {
                     map[powerLevel] = list
                     viewModel.updateCharacter(character.copy(techPowers = map))
                 }
-                // Removed closing dialog here so the modal stays open for more adding
             }
         )
     }
@@ -280,11 +278,10 @@ fun PowersScreen(viewModel: MainViewModel) {
                     }
                     items(powers) { powerName ->
                         val powerData = forcePowersDict[powerName]
-                        // Fix 5: Replaced static clickable card with ExpandablePowerCard
                         ExpandablePowerCard(
                             powerName = powerName,
                             powerData = powerData,
-                            saveDc = universalForceDc, // pass standard or specific DC here
+                            saveDc = universalForceDc,
                             onRemove = {
                                 val map = character.forcePowers.toMutableMap()
                                 val list = map[powerLevel]?.toMutableList() ?: mutableListOf()
@@ -315,11 +312,10 @@ fun PowersScreen(viewModel: MainViewModel) {
                     }
                     items(powers) { powerName ->
                         val powerData = techPowersDict[powerName]
-                        // Fix 5: Replaced static clickable card with ExpandablePowerCard
                         ExpandablePowerCard(
                             powerName = powerName,
                             powerData = powerData,
-                            saveDc = techSaveDc, // pass standard or specific DC here
+                            saveDc = techSaveDc,
                             onRemove = {
                                 val map = character.techPowers.toMutableMap()
                                 val list = map[powerLevel]?.toMutableList() ?: mutableListOf()
@@ -423,11 +419,12 @@ fun PowerDetailDialog(
             Column(modifier = Modifier.fillMaxWidth().height(360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (powerDefinition != null) {
                     val lvlText = if (powerDefinition.levelInt == 0) "At-Will" else "Level ${powerDefinition.levelInt}"
-                    val alignStr = powerDefinition.type?.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
+                    val alignStr = powerDefinition.type.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
                     val castStr = powerDefinition.castingTime?.takeIf { it.isNotBlank() }?.let { "Cast: $it" } ?: ""
                     val rangeStr = powerDefinition.range.takeIf { it.isNotBlank() }?.let { "Range: $it" } ?: ""
                     val durStr = powerDefinition.duration.takeIf { it.isNotBlank() }?.let { "Dur: $it" } ?: ""
                     val metaInfo = listOf("Level: $lvlText", alignStr, castStr, rangeStr, durStr).filter { it.isNotEmpty() }.joinToString("  |  ")
+                    
                     Text(metaInfo, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Description:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = HoloBlue)
@@ -514,7 +511,7 @@ fun AddPowerDialog(
             onDismiss = { viewingPower = null },
             onAdd = {
                 onSave(viewingPower!!.levelInt, viewingPower!!.name)
-                viewingPower = null // Close detail to go back to selection
+                viewingPower = null
             }
         )
     }
@@ -558,7 +555,7 @@ fun AddPowerDialog(
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 Text(power.name, fontWeight = FontWeight.Bold, color = HoloBlue)
-                                val alignStr = power.type?.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
+                                val alignStr = power.type.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
                                 val castStr = power.castingTime?.takeIf { it.isNotBlank() }?.let { "Cast: $it" } ?: ""
                                 val rangeStr = power.range.takeIf { it.isNotBlank() }?.let { "Range: $it" } ?: ""
                                 val durStr = power.duration.takeIf { it.isNotBlank() }?.let { "Dur: $it" } ?: ""
@@ -600,11 +597,14 @@ fun ExpandablePowerCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(powerData?.name ?: powerName, fontWeight = FontWeight.Bold, color = HoloBlue)
-                    val alignStr = powerData?.type?.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
-                    val castStr = powerData?.castingTime?.takeIf { it.isNotBlank() }?.let { "Cast: $it" } ?: ""
-                    val rangeStr = powerData?.range?.takeIf { it.isNotBlank() }?.let { "Range: $it" } ?: ""
-                    val durStr = powerData?.duration?.takeIf { it.isNotBlank() }?.let { "Dur: $it" } ?: ""
-                    val metaInfo = listOf("DC: $saveDc", alignStr, castStr, rangeStr, durStr).filter { it.isNotEmpty() }.joinToString(" | ")
+                    val metaInfo = powerData?.let { p ->
+                    val alignStr = p.type.takeIf { it.isNotBlank() }?.let { "Align: $it" } ?: ""
+                    val castStr = p.castingTime?.takeIf { it.isNotBlank() }?.let { "Cast: $it" } ?: ""
+                    val rangeStr = p.range.takeIf { it.isNotBlank() }?.let { "Range: $it" } ?: ""
+                    val durStr = p.duration.takeIf { it.isNotBlank() }?.let { "Dur: $it" } ?: ""
+                        listOf("DC: $saveDc", alignStr, castStr, rangeStr, durStr).filter { it.isNotEmpty() }.joinToString(" | ")
+                    } ?: "DC: $saveDc"
+
                     Text(metaInfo, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -620,7 +620,7 @@ fun ExpandablePowerCard(
             }
             AnimatedVisibility(visible = expanded && powerData != null) {
                 Text(
-                    text = powerData?.description ?: "",
+                    text = powerData?.description.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 8.dp)
                 )

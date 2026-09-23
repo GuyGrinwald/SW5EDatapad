@@ -11,18 +11,9 @@ interface CharacterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCharacter(character: CharacterEntity)
-
-    @Query("SELECT * FROM character_skills WHERE characterId = :characterId")
-    fun getSkillsForCharacter(characterId: String): Flow<List<CharacterSkillEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSkills(skills: List<CharacterSkillEntity>)
-
-    @Update
-    suspend fun updateSkill(skill: CharacterSkillEntity)
 }
 
-@Database(entities = [CharacterEntity::class, CharacterSkillEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CharacterEntity::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class) 
 abstract class AppDatabase : RoomDatabase() {
     abstract fun characterDao(): CharacterDao
