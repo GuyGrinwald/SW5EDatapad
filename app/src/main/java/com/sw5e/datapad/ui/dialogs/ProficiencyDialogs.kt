@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -70,6 +71,112 @@ fun SkillEditDialog(
                     )
                 )
             }) { Text("Save") }
+        }
+    )
+}
+
+@Composable
+fun SavingThrowEditDialog(
+    target: String,
+    initialProficient: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (Boolean) -> Unit
+) {
+    var isProficient by remember { mutableStateOf(initialProficient) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit $target Saving Throw") },
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = isProficient, onCheckedChange = { isProficient = it })
+                Text("Proficient in $target Saves")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(isProficient) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun AddCombatOptionDialog(
+    title: String,
+    presetOptions: List<String>,
+    currentItems: List<String>,
+    onDismiss: () -> Unit,
+    onAdd: (String) -> Unit
+) {
+    var customName by remember { mutableStateOf("") }
+    var selectedPreset by remember { mutableStateOf("") }
+    var expandedDropdown by remember { mutableStateOf(false) }
+
+    val availablePresets = remember(presetOptions, currentItems) {
+        presetOptions.filter { preset -> currentItems.none { it.equals(preset, ignoreCase = true) } }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, color = HoloBlue) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (availablePresets.isNotEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { expandedDropdown = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (selectedPreset.isNotBlank()) selectedPreset else "Select Option")
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+                        }
+                        DropdownMenu(
+                            expanded = expandedDropdown,
+                            onDismissRequest = { expandedDropdown = false }
+                        ) {
+                            availablePresets.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        selectedPreset = option
+                                        customName = ""
+                                        expandedDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalName = selectedPreset.ifBlank { customName.trim() }
+                    if (finalName.isNotBlank()) {
+                        onAdd(finalName)
+                        onDismiss()
+                    }
+                },
+                enabled = selectedPreset.isNotBlank() || customName.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

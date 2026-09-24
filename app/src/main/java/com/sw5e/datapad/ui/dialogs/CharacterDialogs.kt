@@ -232,7 +232,6 @@ fun ArmorClassEditDialog(
     var armorBase by remember { mutableStateOf(character.armorBase.toString()) }
     var dexCap by remember { mutableStateOf(character.dexCap.toString()) }
     var shieldBonus by remember { mutableStateOf(character.shieldBonus.toString()) }
-    var isArmorProficient by remember { mutableStateOf(character.isArmorProficient) }
     var armorClassOverride by remember { mutableStateOf(character.armorClassOverride.toString()) }
 
     AlertDialog(
@@ -252,31 +251,6 @@ fun ArmorClassEditDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = dexCap,
-                    onValueChange = { dexCap = it },
-                    label = { Text("Dexterity Cap (e.g. 99 for none)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = shieldBonus,
-                    onValueChange = { shieldBonus = it },
-                    label = { Text("Shield Bonus (e.g. 0 or 2)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Armor Proficient")
-                    Checkbox(
-                        checked = isArmorProficient,
-                        onCheckedChange = { isArmorProficient = it }
-                    )
-                }
                 HorizontalDivider(color = CardBorder, modifier = Modifier.padding(vertical = 4.dp))
                 OutlinedTextField(
                     value = armorClassOverride,
@@ -294,7 +268,6 @@ fun ArmorClassEditDialog(
                         armorBase = armorBase.toIntOrNull() ?: character.armorBase,
                         dexCap = dexCap.toIntOrNull() ?: character.dexCap,
                         shieldBonus = shieldBonus.toIntOrNull() ?: character.shieldBonus,
-                        isArmorProficient = isArmorProficient,
                         armorClassOverride = armorClassOverride.toIntOrNull() ?: character.armorClassOverride
                     )
                     onSave(updated)

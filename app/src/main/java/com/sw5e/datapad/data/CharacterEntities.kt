@@ -4,6 +4,17 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
 
+enum class ChargeResetCondition { SHORT_REST, LONG_REST, MANUAL }
+
+enum class MaxChargesScaling {
+    FIXED,              // Uses fixedMaxCharges
+    PROFICIENCY_BONUS,  // Scales with character proficiency bonus
+    STR_MOD, DEX_MOD, CON_MOD, INT_MOD, WIS_MOD, CHA_MOD,
+    CHARACTER_LEVEL
+}
+
+enum class EquipmentCategory { ARMOR, WEAPON, SHIELD, AMMUNITION, EXPLOSIVES, STORAGE, COMMUNICATIONS, MEDICAL, OTHER }
+
 @Entity(tableName = "character_sheet")
 data class CharacterEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
@@ -24,6 +35,7 @@ data class CharacterEntity(
     // Skills and Proficiencies
     val skills: List<CharacterSkillEntity> = emptyList(),
     val toolProficiencies: List<String> = emptyList(),
+    val features: List<CharacterFeature> = emptyList(),
     
     // Saving Throw Proficiencies
     val saveProfStr: Boolean = false,
@@ -37,7 +49,6 @@ data class CharacterEntity(
     val armorClassOverride: Int = 0,
     val armorBase: Int = 10,
     val dexCap: Int = 99,
-    val isArmorProficient: Boolean = true,
     val shieldBonus: Int = 0,
     val speed: Int = 30,
     val currentHp: Int = 10,
@@ -89,10 +100,53 @@ data class CharacterSkillEntity(
 )
 
 data class EquipmentItem(
+    val id: String = UUID.randomUUID().toString(),
     val name: String = "",
-    val type: String = "Adventuring Gear",
+    val type: String = "Adventuring Gear", // e.g. "Medium Armor", "Vibroweapons"
+    val category: EquipmentCategory = EquipmentCategory.OTHER,
     val isEquipped: Boolean = false,
     val cr: Double = 0.0,
     val weight: Double = 0.0,
-    val quantity: Int = 1
+    val quantity: Int = 1,
+
+    // Armor Stats
+    val baseAc: Int = 0,
+    val dexCap: Int? = 99, // null = no cap (Light), 2 = Medium, 0 = Heavy
+
+    // Weapon Stats
+    val primaryDamageDice: String = "1d6",      // e.g. "1d8"
+    val secondaryDamageDice: String? = null,    // Used for Versatile weapons (e.g. "1d10")
+    val damageType: String = "Kinetic",         // e.g., Kinetic, Energy, Ion
+    val properties: List<String> = emptyList(), // e.g., ["finesse", "versatile", "light", "heavy"]
+    val attackBonus: Int = 0,                   // Item attack modifier (+1, +2 weapon)
+    val damageBonus: Int = 0,                   // Item damage modifier
+    val customAbilityOverride: String? = null   // e.g., "WIS" for Force-empowered strikes
+)
+
+data class CharacterFeature(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String = "",
+    val source: String = "", // e.g., "Class: Guardian", "Species: Human", "Item: Belt of Strength"
+    val description: String = "",
+    
+    // Charge Management
+    val usesCharges: Boolean = true,
+    val currentCharges: Int = 0,
+    val fixedMaxCharges: Int = 1,
+    val scalingType: MaxChargesScaling = MaxChargesScaling.FIXED,
+    val chargesBonusOffset: Int = 0, // Flat bonus added to formula (e.g. Prof Bonus + 2)
+    val resetCondition: ChargeResetCondition = ChargeResetCondition.LONG_REST,
+    
+    // Skill / Roll Linkage
+    val linkedSkillName: String? = null,      // e.g. "Athletics" to trigger a skill check
+    val linkedSaveAttribute: String? = null   // e.g. "DEX" for save DC calculation
+)
+
+data class ProcessedWeaponCombat(
+    val weapon: EquipmentItem,
+    val attackBonus: Int,
+    val attackBonusBreakdown: String,
+    val primaryDamageText: String,      // e.g. "1d6 + 4 Kinetic"
+    val versatileDamageText: String?,   // e.g. "1d8 + 4 Kinetic" (if Versatile)
+    val chosenAbility: String           // e.g. "DEX" or "STR"
 )

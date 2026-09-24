@@ -27,16 +27,13 @@ import java.io.OutputStreamWriter
 fun DataVaultScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     var statusMessage by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    
-    val character by viewModel.character.collectAsState()
 
-   val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) { 
-            viewModel.exportToFile(context, uri)
-            statusMessage = "Exported Successfully!"
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) { 
+                viewModel.exportToFile(context, uri)
+                statusMessage = "Exported Successfully!"
+            }
         }
-    }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) { 

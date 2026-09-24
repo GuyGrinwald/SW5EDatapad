@@ -33,12 +33,15 @@ class MainActivity : ComponentActivity() {
 
                 // Check if a character is actively selected to view
                 val isCharacterSelected = selectedCharacter != null
+
+                // Indices accessible when no character is selected: Roster (0), Dice (7), Vault (8)
+                val unselectedTabIndices = listOf(0, 7, 8)
                 
-                // Only allow viewing Roster(0), Dice(6), and Vault(7) when no character is selected
-                val effectiveTab = if (!isCharacterSelected && selectedTab !in listOf(0, 6, 7)) 0 else selectedTab
+                // Restrict tabs when no character is active
+                val effectiveTab = if (!isCharacterSelected && selectedTab !in unselectedTabIndices) 0 else selectedTab
 
                 LaunchedEffect(isCharacterSelected) {
-                    if (!isCharacterSelected && selectedTab !in listOf(0, 6, 7)) {
+                    if (!isCharacterSelected && selectedTab !in unselectedTabIndices) {
                         selectedTab = 0
                     }
                 }
@@ -46,17 +49,18 @@ class MainActivity : ComponentActivity() {
                 val navItems = listOf(
                     NavDestination(0, "Roster", Icons.Default.People),
                     NavDestination(1, "Summary", Icons.Default.Person),
-                    NavDestination(2, "Proficiencies", Icons.Default.Psychology),
-                    NavDestination(3, "Powers", Icons.Default.Cyclone),
-                    NavDestination(4, "Combat", Icons.Default.MilitaryTech),
-                    NavDestination(5, "Gear", Icons.Default.Backpack),
-                    NavDestination(6, "Dice", Icons.Default.Casino),
-                    NavDestination(7, "Vault", Icons.Default.Storage)
+                    NavDestination(2, "Feats & Proficiencies", Icons.Default.Psychology),
+                    NavDestination(3, "Special Features", Icons.Default.Star),
+                    NavDestination(4, "Powers", Icons.Default.Cyclone),
+                    NavDestination(5, "Combat", Icons.Default.MilitaryTech),
+                    NavDestination(6, "Gear", Icons.Default.Backpack),
+                    NavDestination(7, "Dice", Icons.Default.Casino),
+                    NavDestination(8, "Vault", Icons.Default.Storage)
                 )
 
                 // Dynamically filter tabs based on character selection status
                 val visibleNavItems = navItems.filter { 
-                    if (isCharacterSelected) true else it.index in listOf(0, 6, 7) 
+                    if (isCharacterSelected) true else it.index in unselectedTabIndices
                 }
 
                 Scaffold(
@@ -81,11 +85,12 @@ class MainActivity : ComponentActivity() {
                             )
                             1 -> CharacterSummaryScreen(viewModel)
                             2 -> CharacterProficienciesScreen(viewModel)
-                            3 -> PowersScreen(viewModel)
-                            4 -> CombatStylesScreen(viewModel)
-                            5 -> EquipmentScreen(viewModel)
-                            6 -> TacticalRollerScreen(viewModel)
-                            7 -> DataVaultScreen(viewModel)
+                            3 -> SpecialFeaturesScreen(viewModel)
+                            4 -> PowersScreen(viewModel)
+                            5 -> CombatScreen(viewModel)
+                            6 -> EquipmentScreen(viewModel)
+                            7 -> TacticalRollerScreen(viewModel)
+                            8 -> DataVaultScreen(viewModel)
                         }
                     }
                 }
@@ -94,7 +99,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Extracted helper Composable to keep MainActivity clean and modular
 @Composable
 private fun SW5EBottomBar(
     items: List<NavDestination>,
@@ -149,5 +153,4 @@ private fun SW5EBottomBar(
     }
 }
 
-// Ensure NavDestination tracks the absolute index for routing
 private data class NavDestination(val index: Int, val label: String, val icon: ImageVector)

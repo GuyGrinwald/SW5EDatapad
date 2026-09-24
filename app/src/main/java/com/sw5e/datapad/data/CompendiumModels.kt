@@ -14,7 +14,9 @@ data class CompendiumData(
     val techPowers: List<PowerDefinition> = emptyList(),
     val tools: List<ToolDefinition> = emptyList(),  
     val armor: List<ArmorProficiency> = emptyList(),
-    val weapons: List<WeaponProficiency> = emptyList()
+    val weapons: List<WeaponProficiency> = emptyList(),
+    val weaponProperties: List<WeaponPropertyDefinition> = emptyList(),
+    val armorProperties: List<ArmorPropertyDefinition> = emptyList()
 )
 
 data class SkillDefinition(
@@ -84,3 +86,15 @@ data class ArmorProficiency(
 ){
     val category: String get() = type
 }
+
+data class WeaponPropertyDefinition(
+    val name: String = "",
+    val description: String = "",
+    @SerializedName(value = "attackAbilityScore", alternate = ["attribute"])
+    val attackAbilityScore: String? = null,
+)
+
+data class ArmorPropertyDefinition(
+    val name: String = "",
+    val description: String = "",
+)

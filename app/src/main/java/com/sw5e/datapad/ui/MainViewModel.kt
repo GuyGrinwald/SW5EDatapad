@@ -17,7 +17,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStreamReader
 import java.util.UUID
-import kotlinx.coroutines.flow.first
 
 enum class AdvantageMode { NORMAL, ADVANTAGE, DISADVANTAGE }
 
@@ -30,6 +29,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val character: StateFlow<CharacterEntity> = _character
 
     private val _compendiumSkills = MutableStateFlow<List<SkillDefinition>>(emptyList())
+    val compendiumSkills: StateFlow<List<SkillDefinition>> = _compendiumSkills.asStateFlow()
 
     private val _lastRoll = MutableStateFlow<RollResult?>(null)
     val lastRoll: StateFlow<RollResult?> = _lastRoll
@@ -61,6 +61,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _weaponDictionary = MutableStateFlow<Map<String, WeaponProficiency>>(emptyMap())
     val weaponDictionary: StateFlow<Map<String, WeaponProficiency>> = _weaponDictionary
 
+    private val _weaponPropertiesList = MutableStateFlow<List<WeaponPropertyDefinition>>(emptyList())
+    val weaponPropertiesList: StateFlow<List<WeaponPropertyDefinition>> = _weaponPropertiesList
+
+    private val _weaponPropertiesDict = MutableStateFlow<Map<String, WeaponPropertyDefinition>>(emptyMap())
+    val weaponPropertiesDict: StateFlow<Map<String, WeaponPropertyDefinition>> = _weaponPropertiesDict
+
+    private val _armorPropertiesList = MutableStateFlow<List<ArmorPropertyDefinition>>(emptyList())
+    val armorPropertiesList: StateFlow<List<ArmorPropertyDefinition>> = _armorPropertiesList
+
+    private val _armorPropertiesDict = MutableStateFlow<Map<String, ArmorPropertyDefinition>>(emptyMap())
+    val armorPropertiesDict: StateFlow<Map<String, ArmorPropertyDefinition>> = _armorPropertiesDict
+
     private val _characters = MutableStateFlow<List<Character>>(emptyList())
     val characters: StateFlow<List<Character>> = _characters.asStateFlow()
 
@@ -74,7 +86,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Fetch all existing characters from Room database on startup
             val savedEntities = dao.getAllCharacters()
             val rosterList = savedEntities.map { entity ->
                 Character(
@@ -105,6 +116,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val forms = response?.compendium?.lightsaberForms ?: emptyList()
             val armorProfs = response?.compendium?.armor ?: emptyList()
             val weaponProfs = response?.compendium?.weapons ?: emptyList()
+            val weaponProps = response?.compendium?.weaponProperties ?: emptyList()
+            val armorProps = response?.compendium?.armorProperties ?: emptyList()
 
             _compendiumSkills.value = compendiumSkills
             _featsDictionary.value = feats.associateBy { it.name }
@@ -116,6 +129,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _lightsaberForms.value = forms
             _armorDictionary.value = armorProfs.associateBy { it.name }
             _weaponDictionary.value = weaponProfs.associateBy { it.name }
+            _weaponPropertiesList.value = weaponProps
+            _weaponPropertiesDict.value = weaponProps.associateBy { it.name.lowercase() }
+            _armorPropertiesList.value = armorProps
+            _armorPropertiesDict.value = armorProps.associateBy { it.name.lowercase() }
 
             reader.close()
         }
@@ -131,7 +148,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             className = className
         )
 
-       addCharacterToRoster(newChar)
+        addCharacterToRoster(newChar)
 
         viewModelScope.launch(Dispatchers.IO) {
             val newEntity = CharacterEntity(
@@ -149,13 +166,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCharacter(character: Character) {
         _characters.value = _characters.value.filter { it.id != character.id }
         
-        // If the deleted character was the active one, clear everything out
         if (_selectedCharacter.value?.id == character.id) {
             _selectedCharacter.value = null
             _character.value = CharacterEntity(name = "", species = "", characterClass = "")
         }
 
-        // Delete from Room Database
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteCharacterById(character.id)
         }
@@ -167,7 +182,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val existingCharacter = dao.getCharacterById(character.id)
             
-            // Use existing character data if present; otherwise, initialize defaults
             val fullCharacter = existingCharacter ?: CharacterEntity(
                 id = character.id,
                 name = character.name,
@@ -186,7 +200,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addCharacterToRoster(character: Character) {
-        // Check if character already exists in the roster
         val exists = _characters.value.any { it.id == character.id }
         if (!exists) {
             _characters.value = _characters.value + character
@@ -196,7 +209,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateCharacter(updated: CharacterEntity) {
         _character.value = updated
         
-        // Sync vital details back to the active roster list 
         _characters.value = _characters.value.map {
             if (it.id == updated.id) {
                 it.copy(name = updated.name, species = updated.species, className = updated.characterClass, level = updated.level)
@@ -222,7 +234,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val updatedSkills = currentCharacter.skills.map { 
             if (it.skillName == updatedSkill.skillName) updatedSkill else it 
         }
-        // Updating _character will trigger UI recomposition automatically
         updateCharacter(currentCharacter.copy(skills = updatedSkills))
     }
     
@@ -291,9 +302,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun calculateArmorClass(): Int {
         val c = _character.value
         if (c.armorClassOverride > 0) return c.armorClassOverride
-        val dexMod = getAttributeModifier(c.dex)
-        val effectiveDex = minOf(dexMod, c.dexCap)
-        return c.armorBase + effectiveDex + c.shieldBonus
+
+        val equippedArmor = c.equipment.firstOrNull { it.isEquipped && it.category == EquipmentCategory.ARMOR }
+        val equippedShield = c.equipment.firstOrNull { it.isEquipped && it.category == EquipmentCategory.SHIELD }
+
+        val dexMod = getStatModifierByName("DEX")
+        
+        val baseAc = equippedArmor?.baseAc ?: 10
+        val cap = equippedArmor?.dexCap ?: 99
+        val effectiveDex = minOf(dexMod, cap)
+        val shieldBonus = equippedShield?.baseAc ?: 0
+
+        return baseAc + effectiveDex + shieldBonus
     }
 
     fun getProficiencyBonus() = 1 + kotlin.math.ceil(_character.value.level / 4.0).toInt()
@@ -376,6 +396,121 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             char.lightsaberForms + formName
         }
         updateCharacter(char.copy(lightsaberForms = updatedList))
+    }
+
+    fun calculateMaxCharges(feature: CharacterFeature): Int {
+        if (!feature.usesCharges) return 0
+        
+        val baseValue = when (feature.scalingType) {
+            MaxChargesScaling.FIXED -> feature.fixedMaxCharges
+            MaxChargesScaling.PROFICIENCY_BONUS -> getProficiencyBonus()
+            MaxChargesScaling.STR_MOD -> getStatModifierByName("STR")
+            MaxChargesScaling.DEX_MOD -> getStatModifierByName("DEX")
+            MaxChargesScaling.CON_MOD -> getStatModifierByName("CON")
+            MaxChargesScaling.INT_MOD -> getStatModifierByName("INT")
+            MaxChargesScaling.WIS_MOD -> getStatModifierByName("WIS")
+            MaxChargesScaling.CHA_MOD -> getStatModifierByName("CHA")
+            MaxChargesScaling.CHARACTER_LEVEL -> _character.value.level
+        }
+        
+        return maxOf(1, baseValue + feature.chargesBonusOffset)
+    }
+
+    fun spendFeatureCharge(featureId: String, delta: Int) {
+        val current = _character.value
+        val updatedFeatures = current.features.map { feat ->
+            if (feat.id == featureId) {
+                val maxCharges = calculateMaxCharges(feat)
+                val newCharges = (feat.currentCharges + delta).coerceIn(0, maxCharges)
+                feat.copy(currentCharges = newCharges)
+            } else feat
+        }
+        updateCharacter(current.copy(features = updatedFeatures))
+    }
+
+    fun performRest(isLongRest: Boolean) {
+        val current = _character.value
+        val updatedFeatures = current.features.map { feat ->
+            val shouldReset = when (feat.resetCondition) {
+                ChargeResetCondition.SHORT_REST -> true
+                ChargeResetCondition.LONG_REST -> isLongRest
+                ChargeResetCondition.MANUAL -> false
+            }
+            if (shouldReset) {
+                feat.copy(currentCharges = calculateMaxCharges(feat))
+            } else feat
+        }
+        
+        val updatedHp = if (isLongRest) current.maxHp else current.currentHp
+        updateCharacter(current.copy(features = updatedFeatures, currentHp = updatedHp))
+    }
+
+    fun getProcessedWeapons(): List<ProcessedWeaponCombat> {
+        val c = _character.value
+        val profBonus = getProficiencyBonus()
+        val propsDict = _weaponPropertiesDict.value
+
+        return c.equipment.filter { it.isEquipped && it.category == EquipmentCategory.WEAPON }.map { weapon ->
+            val props = weapon.properties.map { it.lowercase().trim() }
+            val isRanged = weapon.type.contains("Blaster", ignoreCase = true) || "ranged" in props
+            val defaultAbility = if (isRanged) "DEX" else "STR"
+
+            // Inspect the hidden attackAbilityScore field of each property tag
+            val candidateAbilities = mutableSetOf(defaultAbility)
+            for (prop in props) {
+                val propDef = propsDict[prop]
+                val attr = propDef?.attackAbilityScore
+                if (!attr.isNullOrBlank()) {
+                    candidateAbilities.add(attr.uppercase())
+                }
+            }
+
+            // Determine governing ability score using existing modifier comparison logic
+            val (abilityMod, abilityName) = if (weapon.customAbilityOverride != null) {
+                Pair(getStatModifierByName(weapon.customAbilityOverride), weapon.customAbilityOverride.uppercase())
+            } else {
+                var bestAbility = defaultAbility
+                var maxMod = getStatModifierByName(defaultAbility)
+
+                for (ability in candidateAbilities) {
+                    val mod = getStatModifierByName(ability)
+                    if (mod > maxMod) {
+                        maxMod = mod
+                        bestAbility = ability
+                    } else if (mod == maxMod && ability == "DEX" && bestAbility == "STR") {
+                        // Maintain tie-breaker preference for DEX over STR when modifiers match
+                        bestAbility = "DEX"
+                    }
+                }
+                Pair(maxMod, bestAbility)
+            }
+
+            val isProficient = c.weaponProficiencies.any { it.equals(weapon.type, ignoreCase = true) || it.equals(weapon.name, ignoreCase = true) }
+            val weaponProfBonus = if (isProficient) profBonus else 0
+
+            val totalAttackBonus = abilityMod + weaponProfBonus + weapon.attackBonus + c.attackSpecialBonus
+            val totalDamageBonus = abilityMod + weapon.damageBonus + c.attackSpecialBonus
+
+            val dmgModText = when {
+                totalDamageBonus > 0 -> " + $totalDamageBonus"
+                totalDamageBonus < 0 -> " - ${kotlin.math.abs(totalDamageBonus)}"
+                else -> ""
+            }
+
+            val primaryDmg = "${weapon.primaryDamageDice}$dmgModText ${weapon.damageType}"
+            val versatileDmg = weapon.secondaryDamageDice?.let { secondary ->
+                "$secondary$dmgModText ${weapon.damageType}"
+            }
+
+            ProcessedWeaponCombat(
+                weapon = weapon,
+                attackBonus = totalAttackBonus,
+                attackBonusBreakdown = "$abilityName (${if (abilityMod >= 0) "+$abilityMod" else "$abilityMod"}) + Prof (${if (weaponProfBonus >= 0) "+$weaponProfBonus" else "$weaponProfBonus"}) + Item (${if (weapon.attackBonus >= 0) "+${weapon.attackBonus}" else "${weapon.attackBonus}"})",
+                primaryDamageText = primaryDmg,
+                versatileDamageText = versatileDmg,
+                chosenAbility = abilityName
+            )
+        }
     }
 
     fun process3DRollResults(rollValues: List<Int>, modifier: Int, advantageMode: AdvantageMode) {
@@ -461,7 +596,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("currentHp", c.currentHp); put("maxHp", c.maxHp); put("tempHp", c.tempHp)
                     put("acOverride", c.armorClassOverride)
                     put("armorClassOverride", c.armorClassOverride)
-                    put("armorBase", c.armorBase); put("dexCap", c.dexCap); put("isArmorProficient", c.isArmorProficient); put("shieldBonus", c.shieldBonus)
+                    put("armorBase", c.armorBase); put("dexCap", c.dexCap); put("shieldBonus", c.shieldBonus)
                     put("hitDieSpent", c.hitDieSpent)
                     put("hitDiceCount", c.hitDieMaximum)
                     put("hitDieMaximum", c.hitDieMaximum)
@@ -518,7 +653,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("lightsaberForms", JSONArray(c.lightsaberForms))
                 }
 
-                // Mode "w" truncates existing files cleanly across all storage providers
                 context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
                     outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
                         writer.write(json.toString(4))
@@ -616,7 +750,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         
                         currentHp = obj.optInt("currentHp", 10), maxHp = obj.optInt("maxHp", 10), tempHp = obj.optInt("tempHp", 0),
                         armorClassOverride = obj.optInt("armorClassOverride", obj.optInt("acOverride", 0)),
-                        armorBase = obj.optInt("armorBase", 10), dexCap = obj.optInt("dexCap", 99), isArmorProficient = obj.optBoolean("isArmorProficient", true), shieldBonus = obj.optInt("shieldBonus", 0),
+                        armorBase = obj.optInt("armorBase", 10), dexCap = obj.optInt("dexCap", 99), shieldBonus = obj.optInt("shieldBonus", 0),
                         hitDieSpent = obj.optInt("hitDieSpent", 0), hitDieMaximum = obj.optInt("hitDieMaximum", obj.optInt("hitDiceCount", 1)),
                         credits = obj.optInt("credits", 0),
                         currentTechPoints = obj.optInt("currentTechPoints", obj.optInt("techPoints", 0)), maxTechPoints = obj.optInt("maxTechPoints", 0),

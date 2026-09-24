@@ -19,13 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sw5e.datapad.data.CharacterSkillEntity
+import com.sw5e.datapad.data.*
 import com.sw5e.datapad.ui.MainViewModel
-import com.sw5e.datapad.ui.components.SaveBox
-import com.sw5e.datapad.ui.dialogs.AddArmorWeaponProficiencyDialog
-import com.sw5e.datapad.ui.dialogs.FeatAddDialog
-import com.sw5e.datapad.ui.dialogs.SkillEditDialog
-import com.sw5e.datapad.ui.dialogs.ToolProficiencyAddDialog
+import com.sw5e.datapad.ui.components.*
+import com.sw5e.datapad.ui.dialogs.*
 import com.sw5e.datapad.ui.theme.*
 
 private data class CombinedProficiencyItem(
@@ -33,49 +30,59 @@ private data class CombinedProficiencyItem(
     val isArmor: Boolean
 )
 
+// Helper to clean up repetitive dictionary searches ignoring case
+private inline fun <T> Map<String, T>.findByName(name: String, getName: (T) -> String): T? {
+    return this[name] ?: this.values.find { getName(it).equals(name, ignoreCase = true) }
+}
+
 @Composable
 fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     val character by viewModel.character.collectAsState()
-    val skills = character.skills
     val profBonus = viewModel.getProficiencyBonus()
+    
     val featsDict by viewModel.featsDictionary.collectAsState()
     val toolsDict by viewModel.toolsDictionary.collectAsState()
     val armorDict by viewModel.armorDictionary.collectAsState()
     val weaponDict by viewModel.weaponDictionary.collectAsState()
 
+    val fightingStylesCompendium by viewModel.fightingStyles.collectAsState()
+    val fightingMasteriesCompendium by viewModel.fightingMasteries.collectAsState()
+    val lightsaberFormsCompendium by viewModel.lightsaberForms.collectAsState()
+
     var showAddFeatDialog by remember { mutableStateOf(false) }
     var showAddToolDialog by remember { mutableStateOf(false) }
     var showAddArmorWeaponDialog by remember { mutableStateOf(false) }
+    var showAddStyleDialog by remember { mutableStateOf(false) }
+    var showAddMasteryDialog by remember { mutableStateOf(false) }
+    var showAddFormDialog by remember { mutableStateOf(false) }
 
     var selectedSkill by remember { mutableStateOf<CharacterSkillEntity?>(null) }
     var saveEditTarget by remember { mutableStateOf<String?>(null) }
-
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Skills", "Saving Throws", "Feats", "Tools", "Armor & Weapons")
 
+    val tabs = listOf("Skills", "Saving Throws", "Feats", "Tools", "Armor & Weapons", "Combat Styles")
+
+    // --- Dialogs ---
     if (showAddFeatDialog) {
         FeatAddDialog(
             featsDict = featsDict,
             currentFeats = character.feats,
             onDismiss = { showAddFeatDialog = false },
             onSave = { newFeatName ->
-                val updatedFeats = character.feats + newFeatName
-                viewModel.updateCharacter(character.copy(feats = updatedFeats))
+                if (!character.feats.contains(newFeatName)) {
+                    viewModel.updateCharacter(character.copy(feats = character.feats + newFeatName))
+                }
             }
         )
     }
-
     if (showAddToolDialog) {
         ToolProficiencyAddDialog(
             toolsDict = toolsDict,
             currentTools = character.toolProficiencies,
             onDismiss = { showAddToolDialog = false },
-            onAdd = { tool ->
-                viewModel.addToolProficiency(tool)
-            }
+            onAdd = { viewModel.addToolProficiency(it) }
         )
     }
-
     if (showAddArmorWeaponDialog) {
         AddArmorWeaponProficiencyDialog(
             armorDict = armorDict,
@@ -85,6 +92,33 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
             onDismiss = { showAddArmorWeaponDialog = false },
             onAddArmor = { viewModel.addArmorProficiency(it) },
             onAddWeapon = { viewModel.addWeaponProficiency(it) }
+        )
+    }
+    if (showAddStyleDialog) {
+        AddCombatOptionDialog(
+            title = "Add Fighting Style",
+            presetOptions = fightingStylesCompendium.map { it.name }, 
+            currentItems = character.fightingStyles,
+            onDismiss = { showAddStyleDialog = false },
+            onAdd = { viewModel.toggleFightingStyle(it) }
+        )
+    }
+    if (showAddMasteryDialog) {
+        AddCombatOptionDialog(
+            title = "Add Fighting Mastery",
+            presetOptions = fightingMasteriesCompendium.map { it.name }, 
+            currentItems = character.fightingMasteries,
+            onDismiss = { showAddMasteryDialog = false },
+            onAdd = { viewModel.toggleFightingMastery(it) }
+        )
+    }
+    if (showAddFormDialog) {
+        AddCombatOptionDialog(
+            title = "Add Lightsaber Form",
+            presetOptions = lightsaberFormsCompendium.map { it.name }, 
+            currentItems = character.lightsaberForms,
+            onDismiss = { showAddFormDialog = false },
+            onAdd = { viewModel.toggleLightsaberForm(it) }
         )
     }
 
@@ -100,54 +134,34 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     }
 
     saveEditTarget?.let { target ->
-        var isProficient by remember {
-            mutableStateOf(
-                when (target) {
-                    "STR" -> character.saveProfStr
-                    "DEX" -> character.saveProfDex
-                    "CON" -> character.saveProfCon
-                    "INT" -> character.saveProfInt
-                    "WIS" -> character.saveProfWis
-                    "CHA" -> character.saveProfCha
-                    else -> false
-                }
-            )
+        val initialProficient = when (target) {
+            "STR" -> character.saveProfStr; "DEX" -> character.saveProfDex; "CON" -> character.saveProfCon
+            "INT" -> character.saveProfInt; "WIS" -> character.saveProfWis; "CHA" -> character.saveProfCha
+            else -> false
         }
-
-        AlertDialog(
-            onDismissRequest = { saveEditTarget = null },
-            title = { Text("Edit $target Saving Throw") },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isProficient, onCheckedChange = { isProficient = it })
-                    Text("Proficient in $target Saves")
+        SavingThrowEditDialog(
+            target = target,
+            initialProficient = initialProficient,
+            onDismiss = { saveEditTarget = null },
+            onSave = { isProficient ->
+                val updated = when (target) {
+                    "STR" -> character.copy(saveProfStr = isProficient)
+                    "DEX" -> character.copy(saveProfDex = isProficient)
+                    "CON" -> character.copy(saveProfCon = isProficient)
+                    "INT" -> character.copy(saveProfInt = isProficient)
+                    "WIS" -> character.copy(saveProfWis = isProficient)
+                    "CHA" -> character.copy(saveProfCha = isProficient)
+                    else -> character
                 }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val updated = when (target) {
-                        "STR" -> character.copy(saveProfStr = isProficient)
-                        "DEX" -> character.copy(saveProfDex = isProficient)
-                        "CON" -> character.copy(saveProfCon = isProficient)
-                        "INT" -> character.copy(saveProfInt = isProficient)
-                        "WIS" -> character.copy(saveProfWis = isProficient)
-                        "CHA" -> character.copy(saveProfCha = isProficient)
-                        else -> character
-                    }
-                    viewModel.updateCharacter(updated)
-                    saveEditTarget = null
-                }) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { saveEditTarget = null }) { Text("Cancel") }
+                viewModel.updateCharacter(updated)
+                saveEditTarget = null
             }
         )
     }
 
+    // --- Main Layout ---
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ScrollableTabRow(
@@ -166,283 +180,84 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
         }
 
         when (selectedTabIndex) {
-            0 -> {
-                if (skills.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "No skills found in database for this character.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(skills, key = { it.skillName }) { skill ->
-                            val statMod = viewModel.getStatModifierByName(skill.associatedAttribute)
-                            val totalMod = statMod + (skill.proficiencyLevel * profBonus) + skill.manualOverride
-                            val modStr = if (totalMod >= 0) "+$totalMod" else "$totalMod"
+            0 -> SkillsTab(character, profBonus, viewModel) { selectedSkill = it }
+            1 -> SavingThrowsTab(character, profBonus, viewModel) { saveEditTarget = it }
+            2 -> FeatsTab(character, featsDict, viewModel) { showAddFeatDialog = true }
+            3 -> ToolsTab(character, toolsDict, viewModel) { showAddToolDialog = true }
+            4 -> ArmorWeaponsTab(character, armorDict, weaponDict, viewModel) { showAddArmorWeaponDialog = true }
+            5 -> CombatStylesTab(
+                character, viewModel, 
+                fightingStylesCompendium, fightingMasteriesCompendium, lightsaberFormsCompendium,
+                onAddStyle = { showAddStyleDialog = true },
+                onAddMastery = { showAddMasteryDialog = true },
+                onAddForm = { showAddFormDialog = true }
+            )
+        }
+    }
+}
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedSkill = skill }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(12.dp)
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(skill.skillName, fontWeight = FontWeight.Bold)
-                                            if (skill.proficiencyLevel == 1) {
-                                                Text("(Proficient)", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
-                                            } else if (skill.proficiencyLevel == 2) {
-                                                Text("(Expertise)", style = MaterialTheme.typography.labelSmall, color = HoloBlue)
-                                            }
-                                        }
-                                        Text(
-                                            skill.associatedAttribute,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = NeonAmber
-                                        )
-                                    }
-                                    Text(
-                                        modStr,
-                                        color = HoloBlue,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+// --- Tab Composables ---
+
+@Composable
+private fun SkillsTab(
+    character: CharacterEntity,
+    profBonus: Int,
+    viewModel: MainViewModel,
+    onSkillSelect: (CharacterSkillEntity) -> Unit
+) {
+    if (character.skills.isEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
+            Text("No skills found in database for this character.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxWidth().fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(character.skills, key = { it.skillName }) { skill ->
+                val statMod = viewModel.getStatModifierByName(skill.associatedAttribute)
+                val totalMod = statMod + (skill.proficiencyLevel * profBonus) + skill.manualOverride
+                val modStr = if (totalMod >= 0) "+$totalMod" else "$totalMod"
+
+                Card(modifier = Modifier.fillMaxWidth().clickable { onSkillSelect(skill) }) {
+                    Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(skill.skillName, fontWeight = FontWeight.Bold)
+                                if (skill.proficiencyLevel == 1) Text("(Proficient)", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
+                                else if (skill.proficiencyLevel == 2) Text("(Expertise)", style = MaterialTheme.typography.labelSmall, color = HoloBlue)
                             }
+                            Text(skill.associatedAttribute, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
                         }
+                        Text(modStr, color = HoloBlue, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }
+        }
+    }
+}
 
-            1 -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                "Saving Throw Modifiers",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NeonAmber
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "STR" }, color = Color.Transparent) {
-                                    SaveBox("STR", character.saveProfStr, viewModel.getAttributeModifier(character.str), profBonus)
-                                }
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "DEX" }, color = Color.Transparent) {
-                                    SaveBox("DEX", character.saveProfDex, viewModel.getAttributeModifier(character.dex), profBonus)
-                                }
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "CON" }, color = Color.Transparent) {
-                                    SaveBox("CON", character.saveProfCon, viewModel.getAttributeModifier(character.con), profBonus)
-                                }
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "INT" }, color = Color.Transparent) {
-                                    SaveBox("INT", character.saveProfInt, viewModel.getAttributeModifier(character.intStat), profBonus)
-                                }
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "WIS" }, color = Color.Transparent) {
-                                    SaveBox("WIS", character.saveProfWis, viewModel.getAttributeModifier(character.wis), profBonus)
-                                }
-                                Surface(modifier = Modifier.clickable { saveEditTarget = "CHA" }, color = Color.Transparent) {
-                                    SaveBox("CHA", character.saveProfCha, viewModel.getAttributeModifier(character.cha), profBonus)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+@Composable
+private fun SavingThrowsTab(
+    character: CharacterEntity,
+    profBonus: Int,
+    viewModel: MainViewModel,
+    onEditTarget: (String) -> Unit
+) {
+    val stats = listOf(
+        Triple("STR", character.saveProfStr, character.str),
+        Triple("DEX", character.saveProfDex, character.dex),
+        Triple("CON", character.saveProfCon, character.con),
+        Triple("INT", character.saveProfInt, character.intStat),
+        Triple("WIS", character.saveProfWis, character.wis),
+        Triple("CHA", character.saveProfCha, character.cha)
+    )
 
-            2 -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Feats",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = HoloBlue
-                        )
-                        TextButton(onClick = { showAddFeatDialog = true }) {
-                            Text("+ Add Feat", color = HoloBlue)
-                        }
-                    }
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(character.feats) { featName ->
-                            val featData = featsDict[featName] ?: featsDict.values.find { it.name.equals(featName, ignoreCase = true) }
-                            val subtitle = featData?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" }
-
-                            ExpandableItemCard(
-                                name = featData?.name ?: featName,
-                                subtitle = subtitle,
-                                description = featData?.description ?: "",
-                                onRemove = {
-                                    val updatedFeats = character.feats - featName
-                                    viewModel.updateCharacter(character.copy(feats = updatedFeats))
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            3 -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Tool Proficiencies",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = HoloBlue
-                        )
-                        TextButton(onClick = { showAddToolDialog = true }) {
-                            Text("+ Add Tool", color = HoloBlue)
-                        }
-                    }
-
-                    if (character.toolProficiencies.isEmpty()) {
-                        Text(
-                            "No tool proficiencies added.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(character.toolProficiencies) { toolName ->
-                                val toolData = toolsDict[toolName] ?: toolsDict.values.find { it.name.equals(toolName, ignoreCase = true) }
-                                val subtitle = toolData?.category?.takeIf { it.isNotBlank() }?.let { "Category: $it" } ?: "Category: Tool"
-
-                                ExpandableItemCard(
-                                    name = toolData?.name ?: toolName,
-                                    subtitle = subtitle,
-                                    description = toolData?.description ?: "",
-                                    onRemove = { viewModel.removeToolProficiency(toolName) }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            4 -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Armor & Weapon Proficiencies",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = HoloBlue
-                        )
-                        TextButton(onClick = { showAddArmorWeaponDialog = true }) {
-                            Text("+ Add Armor / Weapon", color = HoloBlue)
-                        }
-                    }
-
-                    val combinedList = remember(character.armorProficiencies, character.weaponProficiencies) {
-                        character.armorProficiencies.map { CombinedProficiencyItem(it, isArmor = true) } +
-                        character.weaponProficiencies.map { CombinedProficiencyItem(it, isArmor = false) }
-                    }
-
-                    if (combinedList.isEmpty()) {
-                        Text(
-                            "No armor or weapon proficiencies added.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(combinedList, key = { "${if (it.isArmor) "armor" else "weapon"}_${it.name}" }) { item ->
-                                if (item.isArmor) {
-                                    val armorData = armorDict[item.name]
-                                        ?: armorDict.values.find { it.name.equals(item.name, ignoreCase = true) }
-                                    val categoryText = armorData?.category?.takeIf { it.isNotBlank() } ?: "Armor"
-
-                                    ExpandableItemCard(
-                                        name = armorData?.name ?: item.name,
-                                        subtitle = "Category: $categoryText",
-                                        description = armorData?.description ?: "",
-                                        onRemove = { viewModel.removeArmorProficiency(item.name) }
-                                    )
-                                } else {
-                                    val weaponData = weaponDict[item.name]
-                                        ?: weaponDict.values.find { it.name.equals(item.name, ignoreCase = true) }
-                                    val categoryText = weaponData?.category?.takeIf { it.isNotBlank() } ?: "Weapon"
-
-                                    ExpandableItemCard(
-                                        name = weaponData?.name ?: item.name,
-                                        subtitle = "Category: $categoryText",
-                                        description = weaponData?.description ?: "",
-                                        onRemove = { viewModel.removeWeaponProficiency(item.name) }
-                                    )
-                                }
-                            }
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).border(1.dp, CardBorder, RoundedCornerShape(12.dp))) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Saving Throw Modifiers", style = MaterialTheme.typography.titleMedium, color = NeonAmber)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    stats.forEach { (statName, isProficient, score) ->
+                        Surface(modifier = Modifier.clickable { onEditTarget(statName) }, color = Color.Transparent) {
+                            SaveBox(statName, isProficient, viewModel.getAttributeModifier(score), profBonus)
                         }
                     }
                 }
@@ -452,50 +267,244 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
 }
 
 @Composable
+private fun FeatsTab(
+    character: CharacterEntity,
+    featsDict: Map<String, FeatDefinition>,
+    viewModel: MainViewModel,
+    onAddClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Feats", "+ Add Feat", onAddClick)
+        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(character.feats) { featName ->
+                val featData = featsDict.findByName(featName) { it.name }
+                val subtitle = featData?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" }
+                ExpandableItemCard(
+                    name = featData?.name ?: featName,
+                    subtitle = subtitle,
+                    description = featData?.description ?: "",
+                    onRemove = { viewModel.updateCharacter(character.copy(feats = character.feats - featName)) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolsTab(
+    character: CharacterEntity,
+    toolsDict: Map<String, ToolDefinition>,
+    viewModel: MainViewModel,
+    onAddClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Tool Proficiencies", "+ Add Tool", onAddClick)
+        if (character.toolProficiencies.isEmpty()) {
+            Text("No tool proficiencies added.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(character.toolProficiencies) { toolName ->
+                    val toolData = toolsDict.findByName(toolName) { it.name }
+                    ExpandableItemCard(
+                        name = toolData?.name ?: toolName,
+                        subtitle = toolData?.category?.takeIf { it.isNotBlank() }?.let { "Category: $it" } ?: "Category: Tool",
+                        description = toolData?.description ?: "",
+                        onRemove = { viewModel.removeToolProficiency(toolName) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArmorWeaponsTab(
+    character: CharacterEntity,
+    armorDict: Map<String, ArmorProficiency>,
+    weaponDict: Map<String, WeaponProficiency>,
+    viewModel: MainViewModel,
+    onAddClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Armor & Weapon Proficiencies", "+ Add Armor / Weapon", onAddClick)
+        
+        val combinedList = remember(character.armorProficiencies, character.weaponProficiencies) {
+            character.armorProficiencies.map { CombinedProficiencyItem(it, isArmor = true) } +
+            character.weaponProficiencies.map { CombinedProficiencyItem(it, isArmor = false) }
+        }
+
+        if (combinedList.isEmpty()) {
+            Text("No armor or weapon proficiencies added.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(combinedList, key = { "${if (it.isArmor) "armor" else "weapon"}_${it.name}" }) { item ->
+                    if (item.isArmor) {
+                        val armorData = armorDict.findByName(item.name) { it.name }
+                        ExpandableItemCard(
+                            name = armorData?.name ?: item.name,
+                            subtitle = "Category: ${armorData?.category?.takeIf { it.isNotBlank() } ?: "Armor"}",
+                            description = armorData?.description ?: "",
+                            onRemove = { viewModel.removeArmorProficiency(item.name) }
+                        )
+                    } else {
+                        val weaponData = weaponDict.findByName(item.name) { it.name }
+                        ExpandableItemCard(
+                            name = weaponData?.name ?: item.name,
+                            subtitle = "Category: ${weaponData?.category?.takeIf { it.isNotBlank() } ?: "Weapon"}",
+                            description = weaponData?.description ?: "",
+                            onRemove = { viewModel.removeWeaponProficiency(item.name) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CombatStylesTab(
+    character: CharacterEntity,
+    viewModel: MainViewModel,
+    fightingStylesCompendium: List<FightingStyleDefinition>,
+    fightingMasteriesCompendium: List<FightingMasteryDefinition>,
+    lightsaberFormsCompendium: List<LightsaberFormDefinition>,
+    onAddStyle: () -> Unit,
+    onAddMastery: () -> Unit,
+    onAddForm: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        CombatSection(
+            title = "Fighting Styles",
+            addText = "+ Add Style",
+            emptyText = "No fighting styles added.",
+            items = character.fightingStyles,
+            onAddClick = onAddStyle,
+            onRemove = { viewModel.toggleFightingStyle(it) },
+            getDetails = { name -> "Fighting Style" to (fightingStylesCompendium.find { it.name.equals(name, ignoreCase = true) }?.description ?: "") }
+        )
+        HorizontalDivider(color = CardBorder)
+        CombatSection(
+            title = "Fighting Masteries",
+            addText = "+ Add Mastery",
+            emptyText = "No fighting masteries added.",
+            items = character.fightingMasteries,
+            onAddClick = onAddMastery,
+            onRemove = { viewModel.toggleFightingMastery(it) },
+            getDetails = { name -> "Fighting Mastery" to (fightingMasteriesCompendium.find { it.name.equals(name, ignoreCase = true) }?.description ?: "") }
+        )
+        HorizontalDivider(color = CardBorder)
+        CombatSection(
+            title = "Lightsaber Forms Known",
+            addText = "+ Add Form",
+            emptyText = "No lightsaber forms added.",
+            items = character.lightsaberForms,
+            onAddClick = onAddForm,
+            onRemove = { viewModel.toggleLightsaberForm(it) },
+            getDetails = { name ->
+                val form = lightsaberFormsCompendium.find { it.name.equals(name, ignoreCase = true) }
+                val subtitle = form?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" } ?: "Lightsaber Form"
+                subtitle to (form?.description ?: "")
+            }
+        )
+    }
+}
+
+// --- Shared UI Components ---
+
+@Composable
+private fun SectionHeader(title: String, buttonText: String, onAddClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = HoloBlue)
+        TextButton(onClick = onAddClick) {
+            Text(buttonText, color = HoloBlue)
+        }
+    }
+}
+
+@Composable
+private fun CombatSection(
+    title: String,
+    addText: String,
+    emptyText: String,
+    items: List<String>,
+    onAddClick: () -> Unit,
+    onRemove: (String) -> Unit,
+    getDetails: (String) -> Pair<String?, String>
+) {
+    SectionHeader(title, addText, onAddClick)
+    if (items.isEmpty()) {
+        Text(emptyText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        items.forEach { itemName ->
+            val (subtitle, desc) = getDetails(itemName)
+            ExpandableItemCard(
+                name = itemName,
+                subtitle = "",
+                description = desc,
+                onRemove = { onRemove(itemName) }
+            )
+        }
+    }
+}
+
+@Composable
 fun ExpandableItemCard(
     name: String,
-    subtitle: String? = null,
-    description: String = "",
-    onRemove: (() -> Unit)? = null
+    subtitle: String?,
+    description: String,
+    onRemove: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded },
-        colors = CardDefaults.cardColors(containerColor = SpaceBlack)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(12.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = name, fontWeight = FontWeight.Bold, color = HoloBlue)
+                    Text(text = name, fontWeight = FontWeight.Bold)
                     if (!subtitle.isNullOrBlank()) {
-                        Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
+                        Text(
+                            text = subtitle, 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = HoloBlue
+                        )
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (description.isNotBlank()) {
+                    IconButton(onClick = onRemove) {
                         Icon(
-                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (expanded) "Collapse" else "Expand",
-                            tint = HoloBlue
+                            imageVector = Icons.Filled.Delete, 
+                            contentDescription = "Remove",
+                            tint = SithRed
                         )
                     }
-                    if (onRemove != null) {
-                        IconButton(onClick = onRemove) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = SithRed)
-                        }
-                    }
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        tint = HoloBlue
+                    )
                 }
             }
             if (expanded && description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = description, style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp), 
+                    color = CardBorder
+                )
+                Text(
+                    text = description, 
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
