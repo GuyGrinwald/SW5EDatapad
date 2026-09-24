@@ -20,6 +20,7 @@ data class CharacterEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String = "",
     val species: String = "",
+    val background: String = "",
     val characterClass: String = "",
     val level: Int = 1,
     val imageUri: String? = null,

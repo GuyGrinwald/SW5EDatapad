@@ -156,30 +156,26 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Structured Header Card
+
+        // --- 1. Identity & Metadata Card ---
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+                .clickable { showIdentityDialog = true },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // --- Row 1: Portrait Avatar + Character Name ---
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Top: Avatar & Name
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Avatar Frame
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(64.dp)
                             .clip(CircleShape)
-                            .border(1.5.dp, HoloBlue, CircleShape)
+                            .border(2.dp, HoloBlue, CircleShape)
                             .clickable {
                                 imagePickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -195,120 +191,96 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Upload Avatar",
-                                tint = HoloBlue,
-                                modifier = Modifier.size(32.dp)
-                            )
+                            Icon(Icons.Default.Person, contentDescription = "Upload Avatar", tint = HoloBlue)
                         }
                     }
 
-                    // Name Column
-                    Box(
+                    Text(
+                        text = character.name.ifBlank { "Unnamed Character" },
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = HoloBlue,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .weight(1f)
                             .clickable { showNameDialog = true }
-                    ) {
-                        Text(
-                            text = character.name.ifBlank { "Unnamed Character" },
-                            style = MaterialTheme.typography.titleLarge,
-                            color = HoloBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    )
                 }
 
-                HorizontalDivider(color = CardBorder.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = CardBorder.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // --- Row 2: Species, Level, Class, Proficiency Bonus ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showIdentityDialog = true }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                // Bottom: Metadata Grid (Inspired by the physical sheet)
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            "${character.species} • Lvl ${character.level} ${character.characterClass}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        HeaderBadge("PROF BONUS", "+$profBonus")
+                        LabeledData("CLASS & LEVEL", "${character.characterClass} ${character.level}")
+                        LabeledData("BACKGROUND", character.background.ifBlank { "None" })
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LabeledData("SPECIES", character.species.ifBlank { "Unknown" })
+                        LabeledData("PROFICIENCY BONUS", "+$profBonus")
                     }
                 }
+            }
+        }
 
-                HorizontalDivider(color = CardBorder.copy(alpha = 0.5f))
-
-                // --- Row 3: HP, Temp HP, Hit Dice ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showHpDiceDialog = true }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        HeaderBadge("HP", "${character.currentHp}/${character.maxHp}")
-                        HeaderBadge("TEMP HP", "${character.tempHp}")
-                        HeaderBadge(
-                            "HIT DICE",
-                            "${character.hitDieMaximum - character.hitDieSpent}/${character.hitDieMaximum} (${character.hitDieSize})"
-                        )
-                    }
+        // --- 2. Combat Vitals Card (HP, AC, Hit Dice) ---
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.clickable { showAcDialog = true }) {
+                    HeaderBadge("ARMOR CLASS", "${viewModel.calculateArmorClass()}")
                 }
-
-                HorizontalDivider(color = CardBorder.copy(alpha = 0.5f))
-
-                // --- Row 4: Calculated AC ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showAcDialog = true }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        HeaderBadge("ARMOR CLASS", "${viewModel.calculateArmorClass()}")
-                    }
+                Box(modifier = Modifier.clickable { showHpDiceDialog = true }) {
+                    HeaderBadge("HIT POINTS", "${character.currentHp} / ${character.maxHp}")
                 }
-
-                HorizontalDivider(color = CardBorder.copy(alpha = 0.5f))
-
-                // --- Row 5: Movement Speeds and Credits UI ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showSpeedCreditsDialog = true }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        HeaderBadge("WALK", "${character.speed} ft")
-                        if (character.swimSpeed > 0) {
-                            HeaderBadge("SWIM", "${character.swimSpeed} ft")
-                        }
-                        if (character.flySpeed > 0) {
-                            HeaderBadge("FLY", "${character.flySpeed} ft")
-                        }
-                        if (character.climbSpeed > 0) {
-                            HeaderBadge("CLIMB", "${character.climbSpeed} ft")
-                        }
-                        HeaderBadge("CREDITS", "${character.credits} ¢")
-                    }
+                Box(modifier = Modifier.clickable { showHpDiceDialog = true }) {
+                    HeaderBadge("TEMP HP", "${character.tempHp}")
                 }
+                Box(modifier = Modifier.clickable { showHpDiceDialog = true }) {
+                    HeaderBadge(
+                        "HIT DICE", 
+                        // Fixed: Removed redundant 'd' since hitDieSize already contains it
+                        "${character.hitDieMaximum - character.hitDieSpent}${character.hitDieSize}"
+                    )
+                }
+            }
+        }
+
+        // --- 3. Movement & Utility Card ---
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+                .clickable { showSpeedCreditsDialog = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HeaderBadge("SPEED", "${character.speed} ft")
+                if (character.swimSpeed > 0) HeaderBadge("SWIM", "${character.swimSpeed} ft")
+                if (character.flySpeed > 0) HeaderBadge("FLY", "${character.flySpeed} ft")
+                if (character.climbSpeed > 0) HeaderBadge("CLIMB", "${character.climbSpeed} ft")
+                HeaderBadge("CREDITS", "${character.credits} ¢")
             }
         }
 
@@ -366,5 +338,23 @@ fun RestTriggerCard(onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+}
+
+@Composable
+fun LabeledData(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium
+        )
     }
 }

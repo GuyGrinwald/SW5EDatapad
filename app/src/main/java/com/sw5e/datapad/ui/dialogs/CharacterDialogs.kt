@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sw5e.datapad.data.CharacterEntity
+import com.sw5e.datapad.data.CharacterFeature
 import com.sw5e.datapad.ui.theme.*
 import com.sw5e.datapad.ui.MainViewModel
 
@@ -55,29 +56,37 @@ fun IdentityEditDialog(
     onSave: (updatedCharacter: CharacterEntity) -> Unit
 ) {
     var species by remember { mutableStateOf(character.species) }
+    var background by remember { mutableStateOf(character.background) }
     var levelText by remember { mutableStateOf(character.level.toString()) }
     var characterClass by remember { mutableStateOf(character.characterClass) }
+
+    // Retrieve existing background feature to pre-fill if present
+    val existingBgFeature = remember { character.features.find { it.source.startsWith("Background:") } }
+    var bgFeatureName by remember { mutableStateOf(existingBgFeature?.name ?: "") }
+    var bgFeatureDesc by remember { mutableStateOf(existingBgFeature?.description ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Identity & Level", color = HoloBlue, fontWeight = FontWeight.Bold) },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
-                    value = species,
-                    onValueChange = { species = it },
-                    label = { Text("Species") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 OutlinedTextField(
                     value = levelText,
                     onValueChange = { levelText = it },
                     label = { Text("Level") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = species,
+                    onValueChange = { species = it },
+                    label = { Text("Species") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -88,17 +97,55 @@ fun IdentityEditDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = background,
+                    onValueChange = { background = it },
+                    label = { Text("Background Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = bgFeatureName,
+                    onValueChange = { bgFeatureName = it },
+                    label = { Text("Background Feature Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = bgFeatureDesc,
+                    onValueChange = { bgFeatureDesc = it },
+                    label = { Text("Background Feature Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     val newLevel = levelText.toIntOrNull()?.coerceAtLeast(1) ?: character.level
+                    
+                    // Enforce 1 background max: remove old one before appending
+                    val otherFeatures = character.features.filter { !it.source.startsWith("Background:") }
+                    val newFeatures = if (background.isNotBlank() && bgFeatureName.isNotBlank()) {
+                        otherFeatures + CharacterFeature(
+                            id = existingBgFeature?.id ?: java.util.UUID.randomUUID().toString(),
+                            name = bgFeatureName,
+                            source = "Background: $background",
+                            description = bgFeatureDesc,
+                            usesCharges = false // Explicitly disabling charges
+                        )
+                    } else {
+                        otherFeatures
+                    }
+
                     val updated = character.copy(
                         species = species,
+                        background = background,
                         level = newLevel,
                         characterClass = characterClass,
-                        hitDieMaximum = newLevel
+                        hitDieMaximum = newLevel,
+                        features = newFeatures
                     )
                     onSave(updated)
                 }

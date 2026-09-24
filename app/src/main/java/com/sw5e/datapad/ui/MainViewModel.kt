@@ -625,6 +625,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("species", c.species)
                     put("class", c.characterClass)
                     put("characterClass", c.characterClass)
+                    put("background", c.background)
                     put("level", c.level)
                     put("str", c.str); put("dex", c.dex); put("con", c.con)
                     put("intStat", c.intStat); put("wis", c.wis); put("cha", c.cha)
@@ -870,6 +871,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         name = obj.optString("name", "Unknown"), 
                         species = obj.optString("species", "Human"), 
                         characterClass = obj.optString("characterClass", obj.optString("class", "Fighter")),
+                        background = obj.optString("background", ""),
                         level = obj.optInt("level", 1), 
                         str = obj.optInt("str", 10), dex = obj.optInt("dex", 10), con = obj.optInt("con", 10),
                         intStat = obj.optInt("intStat", obj.optInt("int", 10)), wis = obj.optInt("wis", 10), cha = obj.optInt("cha", 10),
