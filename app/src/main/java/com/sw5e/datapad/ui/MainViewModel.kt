@@ -601,7 +601,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("saveProfInt", c.saveProfInt); put("saveProfWis", c.saveProfWis); put("saveProfCha", c.saveProfCha)
 
                     put("currentHp", c.currentHp); put("maxHp", c.maxHp); put("tempHp", c.tempHp)
-                    put("acOverride", c.armorClassOverride)
                     put("armorClassOverride", c.armorClassOverride)
                     put("armorBase", c.armorBase); put("dexCap", c.dexCap); put("shieldBonus", c.shieldBonus)
                     put("hitDieSpent", c.hitDieSpent)
@@ -669,6 +668,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("fightingStyles", JSONArray(c.fightingStyles))
                     put("fightingMasteries", JSONArray(c.fightingMasteries))
                     put("lightsaberForms", JSONArray(c.lightsaberForms))
+
+                    val featuresArray = JSONArray()
+                    c.features.forEach { feature ->
+                        featuresArray.put(JSONObject().apply {
+                            put("id", feature.id)
+                            put("name", feature.name)
+                            put("source", feature.source)
+                            put("description", feature.description)
+                            put("usesCharges", feature.usesCharges)
+                            put("currentCharges", feature.currentCharges)
+                            put("fixedMaxCharges", feature.fixedMaxCharges)
+                            put("scalingType", feature.scalingType.name)
+                            put("chargesBonusOffset", feature.chargesBonusOffset)
+                            put("resetCondition", feature.resetCondition.name)
+                            if (feature.linkedSkillName != null) put("linkedSkillName", feature.linkedSkillName)
+                            if (feature.linkedSaveAttribute != null) put("linkedSaveAttribute", feature.linkedSaveAttribute)
+                        })
+                    }
+                    put("features", featuresArray)
                 }
 
                 context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
@@ -771,6 +789,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         return list
                     }
 
+                    fun parseFeaturesList(key: String): List<CharacterFeature> {
+                        val arr = obj.optJSONArray(key) ?: return emptyList()
+                        val list = mutableListOf<CharacterFeature>()
+                        for (i in 0 until arr.length()) {
+                            val itemObj = arr.optJSONObject(i) ?: continue
+
+                            val scalingTypeStr = itemObj.optString("scalingType", "FIXED")
+                            val parsedScaling = try {
+                                MaxChargesScaling.valueOf(scalingTypeStr)
+                            } catch (e: Exception) {
+                                MaxChargesScaling.FIXED
+                            }
+
+                            val resetCondStr = itemObj.optString("resetCondition", "LONG_REST")
+                            val parsedReset = try {
+                                ChargeResetCondition.valueOf(resetCondStr)
+                            } catch (e: Exception) {
+                                ChargeResetCondition.LONG_REST
+                            }
+
+                            list.add(
+                                CharacterFeature(
+                                    id = itemObj.optString("id", UUID.randomUUID().toString()),
+                                    name = itemObj.optString("name", ""),
+                                    source = itemObj.optString("source", ""),
+                                    description = itemObj.optString("description", ""),
+                                    usesCharges = itemObj.optBoolean("usesCharges", true),
+                                    currentCharges = itemObj.optInt("currentCharges", 0),
+                                    fixedMaxCharges = itemObj.optInt("fixedMaxCharges", 1),
+                                    scalingType = parsedScaling,
+                                    chargesBonusOffset = itemObj.optInt("chargesBonusOffset", 0),
+                                    resetCondition = parsedReset,
+                                    linkedSkillName = if (itemObj.has("linkedSkillName") && !itemObj.isNull("linkedSkillName")) itemObj.optString("linkedSkillName") else null,
+                                    linkedSaveAttribute = if (itemObj.has("linkedSaveAttribute") && !itemObj.isNull("linkedSaveAttribute")) itemObj.optString("linkedSaveAttribute") else null
+                                )
+                            )
+                        }
+                        return list
+                    }
+
                     val updated = _character.value.copy(
                         id = obj.optString("id", _character.value.id.ifBlank { UUID.randomUUID().toString() }),
                         name = obj.optString("name", "Unknown"), 
@@ -788,7 +846,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         saveProfInt = obj.optBoolean("saveProfInt", false), saveProfWis = obj.optBoolean("saveProfWis", false), saveProfCha = obj.optBoolean("saveProfCha", false),
                         
                         currentHp = obj.optInt("currentHp", 10), maxHp = obj.optInt("maxHp", 10), tempHp = obj.optInt("tempHp", 0),
-                        armorClassOverride = obj.optInt("armorClassOverride", obj.optInt("acOverride", 0)),
+                        armorClassOverride = obj.optInt("armorClassOverride"),
                         armorBase = obj.optInt("armorBase", 10), dexCap = obj.optInt("dexCap", 99), shieldBonus = obj.optInt("shieldBonus", 0),
                         hitDieSpent = obj.optInt("hitDieSpent", 0), hitDieMaximum = obj.optInt("hitDieMaximum", obj.optInt("hitDiceCount", 1)),
                         credits = obj.optInt("credits", 0),
@@ -811,6 +869,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         techPowers = parseMap("techPowers"),
 
                         equipment = parseEquipmentList("equipment"),
+                        features = parseFeaturesList("features"),
                     )
                     
                     val rosterChar = Character(

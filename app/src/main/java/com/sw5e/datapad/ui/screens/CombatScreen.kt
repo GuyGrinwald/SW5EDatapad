@@ -30,6 +30,7 @@ import com.sw5e.datapad.data.ProcessedWeaponCombat
 import com.sw5e.datapad.data.WeaponPropertyDefinition
 import com.sw5e.datapad.ui.MainViewModel
 import com.sw5e.datapad.ui.theme.*
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun CombatScreen(viewModel: MainViewModel) {
@@ -132,15 +133,55 @@ fun CombatScreen(viewModel: MainViewModel) {
                 if (processedWeapons.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("WEAPON", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(2f))
-                            Text("ATK", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                            Text("DAMAGE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(2.5f))
+                            Text(
+                                text = "WEAPON",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(4f)
+                            )
+                            Text(
+                                text = "ATK",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1.2f)
+                            )
+                            Text(
+                                text = "DAMAGE",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(2.8f)
+                            )
                         }
                         processedWeapons.forEach { pw ->
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text(pw.weapon.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = HoloBlue, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(2f))
-                                Text(formatBonus(pw.attackBonus), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Text(pw.primaryDamageText, style = MaterialTheme.typography.bodySmall, color = NeonAmber, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(2.5f))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = pw.weapon.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HoloBlue,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(4f)
+                                )
+                                Text(
+                                    text = formatBonus(pw.attackBonus),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.weight(1.2f)
+                                )
+                                Text(
+                                    text = pw.primaryDamageText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = NeonAmber,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(2.8f)
+                                )
                             }
                         }
                     }

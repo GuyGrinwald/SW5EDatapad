@@ -273,10 +273,11 @@ fun PowersScreen(viewModel: MainViewModel) {
                 // Force Powers List
                 character.forcePowers.toSortedMap().forEach { (powerLevel, powers) ->
                     item {
-                        val levelLabel = if (powerLevel == 0) "At-Will" else "Level $powerLevel"
+                        val pointCost = if (powerLevel == 0) 0 else powerLevel + 1
+                        val levelLabel = if (powerLevel == 0) "At-Will (0 Force Points)" else "Level $powerLevel ($pointCost Force Points)"
                         Text(levelLabel, style = MaterialTheme.typography.labelMedium, color = HoloBlue, modifier = Modifier.padding(vertical = 4.dp))
                     }
-                    items(powers) { powerName ->
+                    items(powers.sorted()) { powerName ->
                         val powerData = forcePowersDict[powerName]
                         ExpandablePowerCard(
                             powerName = powerName,
@@ -307,10 +308,11 @@ fun PowersScreen(viewModel: MainViewModel) {
                 // Tech Powers List
                 character.techPowers.toSortedMap().forEach { (powerLevel, powers) ->
                     item {
-                        val levelLabel = if (powerLevel == 0) "At-Will" else "Level $powerLevel"
+                        val pointCost = if (powerLevel == 0) 0 else powerLevel + 1
+                        val levelLabel = if (powerLevel == 0) "At-Will (0 Tech Points)" else "Level $powerLevel ($pointCost Tech Points)"
                         Text(levelLabel, style = MaterialTheme.typography.labelMedium, color = HoloBlue, modifier = Modifier.padding(vertical = 4.dp))
                     }
-                    items(powers) { powerName ->
+                    items(powers.sorted()) { powerName ->
                         val powerData = techPowersDict[powerName]
                         ExpandablePowerCard(
                             powerName = powerName,
@@ -545,7 +547,7 @@ fun AddPowerDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(availablePowers.filter { it.levelInt == selectedLevel }) { power ->
+                    items(availablePowers.filter { it.levelInt == selectedLevel }.sortedBy { it.name }) { power ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()

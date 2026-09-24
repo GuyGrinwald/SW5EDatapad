@@ -39,7 +39,7 @@ private inline fun <T> Map<String, T>.findByName(name: String, getName: (T) -> S
 fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     val character by viewModel.character.collectAsState()
     val profBonus = viewModel.getProficiencyBonus()
-    
+
     val featsDict by viewModel.featsDictionary.collectAsState()
     val toolsDict by viewModel.toolsDictionary.collectAsState()
     val armorDict by viewModel.armorDictionary.collectAsState()
@@ -97,7 +97,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     if (showAddStyleDialog) {
         AddCombatOptionDialog(
             title = "Add Fighting Style",
-            presetOptions = fightingStylesCompendium.map { it.name }, 
+            presetOptions = fightingStylesCompendium.map { it.name },
             currentItems = character.fightingStyles,
             onDismiss = { showAddStyleDialog = false },
             onAdd = { viewModel.toggleFightingStyle(it) }
@@ -106,7 +106,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     if (showAddMasteryDialog) {
         AddCombatOptionDialog(
             title = "Add Fighting Mastery",
-            presetOptions = fightingMasteriesCompendium.map { it.name }, 
+            presetOptions = fightingMasteriesCompendium.map { it.name },
             currentItems = character.fightingMasteries,
             onDismiss = { showAddMasteryDialog = false },
             onAdd = { viewModel.toggleFightingMastery(it) }
@@ -115,7 +115,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
     if (showAddFormDialog) {
         AddCombatOptionDialog(
             title = "Add Lightsaber Form",
-            presetOptions = lightsaberFormsCompendium.map { it.name }, 
+            presetOptions = lightsaberFormsCompendium.map { it.name },
             currentItems = character.lightsaberForms,
             onDismiss = { showAddFormDialog = false },
             onAdd = { viewModel.toggleLightsaberForm(it) }
@@ -186,7 +186,7 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
             3 -> ToolsTab(character, toolsDict, viewModel) { showAddToolDialog = true }
             4 -> ArmorWeaponsTab(character, armorDict, weaponDict, viewModel) { showAddArmorWeaponDialog = true }
             5 -> CombatStylesTab(
-                character, viewModel, 
+                character, viewModel,
                 fightingStylesCompendium, fightingMasteriesCompendium, lightsaberFormsCompendium,
                 onAddStyle = { showAddStyleDialog = true },
                 onAddMastery = { showAddMasteryDialog = true },
@@ -195,8 +195,6 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
         }
     }
 }
-
-// --- Tab Composables ---
 
 @Composable
 private fun SkillsTab(
@@ -207,26 +205,57 @@ private fun SkillsTab(
 ) {
     if (character.skills.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.Center) {
-            Text("No skills found in database for this character.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "No skills found in database for this character.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxWidth().fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             items(character.skills, key = { it.skillName }) { skill ->
                 val statMod = viewModel.getStatModifierByName(skill.associatedAttribute)
                 val totalMod = statMod + (skill.proficiencyLevel * profBonus) + skill.manualOverride
                 val modStr = if (totalMod >= 0) "+$totalMod" else "$totalMod"
 
                 Card(modifier = Modifier.fillMaxWidth().clickable { onSkillSelect(skill) }) {
-                    Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
                                 Text(skill.skillName, fontWeight = FontWeight.Bold)
-                                if (skill.proficiencyLevel == 1) Text("(Proficient)", style = MaterialTheme.typography.labelSmall, color = NeonAmber)
-                                else if (skill.proficiencyLevel == 2) Text("(Expertise)", style = MaterialTheme.typography.labelSmall, color = HoloBlue)
+                                if (skill.proficiencyLevel == 1) Text(
+                                    "(Proficient)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NeonAmber
+                                )
+                                else if (skill.proficiencyLevel == 2) Text(
+                                    "(Expertise)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = HoloBlue
+                                )
                             }
-                            Text(skill.associatedAttribute, style = MaterialTheme.typography.labelSmall, color = NeonAmber)
+                            Text(
+                                skill.associatedAttribute,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NeonAmber
+                            )
                         }
-                        Text(modStr, color = HoloBlue, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            modStr,
+                            color = HoloBlue,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -251,7 +280,9 @@ private fun SavingThrowsTab(
     )
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).border(1.dp, CardBorder, RoundedCornerShape(12.dp))) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+        ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Saving Throw Modifiers", style = MaterialTheme.typography.titleMedium, color = NeonAmber)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -300,14 +331,22 @@ private fun ToolsTab(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("Tool Proficiencies", "+ Add Tool", onAddClick)
         if (character.toolProficiencies.isEmpty()) {
-            Text("No tool proficiencies added.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "No tool proficiencies added.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 items(character.toolProficiencies) { toolName ->
                     val toolData = toolsDict.findByName(toolName) { it.name }
                     ExpandableItemCard(
                         name = toolData?.name ?: toolName,
-                        subtitle = toolData?.category?.takeIf { it.isNotBlank() }?.let { "Category: $it" } ?: "Category: Tool",
+                        subtitle = toolData?.category?.takeIf { it.isNotBlank() }?.let { "Category: $it" }
+                            ?: "Category: Tool",
                         description = toolData?.description ?: "",
                         onRemove = { viewModel.removeToolProficiency(toolName) }
                     )
@@ -327,16 +366,23 @@ private fun ArmorWeaponsTab(
 ) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("Armor & Weapon Proficiencies", "+ Add Armor / Weapon", onAddClick)
-        
+
         val combinedList = remember(character.armorProficiencies, character.weaponProficiencies) {
             character.armorProficiencies.map { CombinedProficiencyItem(it, isArmor = true) } +
-            character.weaponProficiencies.map { CombinedProficiencyItem(it, isArmor = false) }
+                    character.weaponProficiencies.map { CombinedProficiencyItem(it, isArmor = false) }
         }
 
         if (combinedList.isEmpty()) {
-            Text("No armor or weapon proficiencies added.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "No armor or weapon proficiencies added.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 items(combinedList, key = { "${if (it.isArmor) "armor" else "weapon"}_${it.name}" }) { item ->
                     if (item.isArmor) {
                         val armorData = armorDict.findByName(item.name) { it.name }
@@ -372,7 +418,10 @@ private fun CombatStylesTab(
     onAddMastery: () -> Unit,
     onAddForm: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         CombatSection(
             title = "Fighting Styles",
             addText = "+ Add Style",
@@ -380,7 +429,14 @@ private fun CombatStylesTab(
             items = character.fightingStyles,
             onAddClick = onAddStyle,
             onRemove = { viewModel.toggleFightingStyle(it) },
-            getDetails = { name -> "Fighting Style" to (fightingStylesCompendium.find { it.name.equals(name, ignoreCase = true) }?.description ?: "") }
+            getDetails = { name ->
+                "Fighting Style" to (fightingStylesCompendium.find {
+                    it.name.equals(
+                        name,
+                        ignoreCase = true
+                    )
+                }?.description ?: "")
+            }
         )
         HorizontalDivider(color = CardBorder)
         CombatSection(
@@ -390,7 +446,14 @@ private fun CombatStylesTab(
             items = character.fightingMasteries,
             onAddClick = onAddMastery,
             onRemove = { viewModel.toggleFightingMastery(it) },
-            getDetails = { name -> "Fighting Mastery" to (fightingMasteriesCompendium.find { it.name.equals(name, ignoreCase = true) }?.description ?: "") }
+            getDetails = { name ->
+                "Fighting Mastery" to (fightingMasteriesCompendium.find {
+                    it.name.equals(
+                        name,
+                        ignoreCase = true
+                    )
+                }?.description ?: "")
+            }
         )
         HorizontalDivider(color = CardBorder)
         CombatSection(
@@ -402,18 +465,21 @@ private fun CombatStylesTab(
             onRemove = { viewModel.toggleLightsaberForm(it) },
             getDetails = { name ->
                 val form = lightsaberFormsCompendium.find { it.name.equals(name, ignoreCase = true) }
-                val subtitle = form?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" } ?: "Lightsaber Form"
+                val subtitle =
+                    form?.prerequisite?.takeIf { it.isNotBlank() }?.let { "Prerequisite: $it" } ?: "Lightsaber Form"
                 subtitle to (form?.description ?: "")
             }
         )
     }
 }
 
-// --- Shared UI Components ---
-
 @Composable
 private fun SectionHeader(title: String, buttonText: String, onAddClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = HoloBlue)
         TextButton(onClick = onAddClick) {
             Text(buttonText, color = HoloBlue)
@@ -474,8 +540,8 @@ fun ExpandableItemCard(
                     Text(text = name, fontWeight = FontWeight.Bold)
                     if (!subtitle.isNullOrBlank()) {
                         Text(
-                            text = subtitle, 
-                            style = MaterialTheme.typography.labelSmall, 
+                            text = subtitle,
+                            style = MaterialTheme.typography.labelSmall,
                             color = HoloBlue
                         )
                     }
@@ -483,7 +549,7 @@ fun ExpandableItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onRemove) {
                         Icon(
-                            imageVector = Icons.Filled.Delete, 
+                            imageVector = Icons.Filled.Delete,
                             contentDescription = "Remove",
                             tint = SithRed
                         )
@@ -497,11 +563,11 @@ fun ExpandableItemCard(
             }
             if (expanded && description.isNotBlank()) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp), 
+                    modifier = Modifier.padding(vertical = 8.dp),
                     color = CardBorder
                 )
                 Text(
-                    text = description, 
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
