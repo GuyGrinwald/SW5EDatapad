@@ -432,7 +432,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateCharacter(current.copy(features = updatedFeatures))
     }
 
-    fun takeShortRest() {
+    fun takeShortRest(hitDiceSpentAmount: Int, healingReceived: Int) {
         val current = _character.value
         
         // Reset features that recharge on a Short Rest
@@ -444,7 +444,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         
-        updateCharacter(current.copy(features = updatedFeatures))
+        // Apply healing (capped at maxHp) and update spent hit dice
+        val newHp = (current.currentHp + healingReceived).coerceAtMost(current.maxHp)
+        val newHitDieSpent = (current.hitDieSpent + hitDiceSpentAmount).coerceAtMost(current.hitDieMaximum)
+        
+        updateCharacter(
+            current.copy(
+                features = updatedFeatures,
+                currentHp = newHp,
+                hitDieSpent = newHitDieSpent
+            )
+        )
     }
 
     fun takeLongRest() {
@@ -468,7 +478,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             current.copy(
                 features = updatedFeatures,
                 currentHp = current.maxHp,
-                hitDieSpent = newHitDieSpent
+                hitDieSpent = newHitDieSpent,
+                currentForcePoints = current.maxForcePoints,
+                currentTechPoints = current.maxTechPoints 
             )
         )
     }

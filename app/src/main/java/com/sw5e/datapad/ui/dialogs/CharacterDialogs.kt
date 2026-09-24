@@ -394,43 +394,96 @@ fun RestActionDialog(
     viewModel: MainViewModel,
     onDismiss: () -> Unit
 ) {
+    // State to toggle between the rest selection and short rest inputs
+    var showShortRestOptions by remember { mutableStateOf(false) }
+    
+    // State for the user's input
+    var hitDiceToSpend by remember { mutableStateOf("") }
+    var healingReceived by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Take a Rest", color = HoloBlue, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (showShortRestOptions) "Short Rest Details" else "Take a Rest", 
+                color = HoloBlue, 
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Select the type of rest you want to take.")
-                
-                Button(
-                    onClick = {
-                        viewModel.takeShortRest()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Short Rest (1 Hour)")
-                }
-                
-                Button(
-                    onClick = {
-                        viewModel.takeLongRest()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Long Rest (8 Hours)")
+                if (!showShortRestOptions) {
+                    Text("Select the type of rest you want to take.")
+                    
+                    Button(
+                        onClick = { showShortRestOptions = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Short Rest (1 Hour)")
+                    }
+                    
+                    Button(
+                        onClick = {
+                            viewModel.takeLongRest()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Long Rest (8 Hours)")
+                    }
+                } else {
+                    Text("Enter the hit dice spent and the total healing rolled.")
+                    
+                    OutlinedTextField(
+                        value = hitDiceToSpend,
+                        onValueChange = { hitDiceToSpend = it },
+                        label = { Text("Hit Dice Spent") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    OutlinedTextField(
+                        value = healingReceived,
+                        onValueChange = { healingReceived = it },
+                        label = { Text("Healing Received") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            // Only show the confirm button if we are in the Short Rest input view
+            if (showShortRestOptions) {
+                Button(
+                    onClick = {
+                        val dice = hitDiceToSpend.toIntOrNull() ?: 0
+                        val healing = healingReceived.toIntOrNull() ?: 0
+                        viewModel.takeShortRest(dice, healing)
+                        onDismiss()
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            }
+        },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(
+                onClick = {
+                    if (showShortRestOptions) {
+                        // Go back to the main rest selection
+                        showShortRestOptions = false 
+                    } else {
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(if (showShortRestOptions) "Back" else "Cancel")
             }
         }
     )
