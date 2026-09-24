@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
     var showAcDialog by remember { mutableStateOf(false) }
     var showSpeedCreditsDialog by remember { mutableStateOf(false) }
     var selectedAttribute by remember { mutableStateOf<String?>(null) }
+    var showRestDialog by remember { mutableStateOf(false) }
 
     // Media Picker for Character Portrait
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -115,6 +117,13 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
                 )
                 showSpeedCreditsDialog = false
             }
+        )
+    }
+    
+    if (showRestDialog) {
+        RestActionDialog(
+            viewModel = viewModel,
+            onDismiss = { showRestDialog = false }
         )
     }
 
@@ -303,6 +312,9 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
             }
         }
 
+        // Rest Trigger Actions
+        RestTriggerCard(onClick = { showRestDialog = true })
+
         // Ability Score Ribbon
         Text(
             "Ability Scores",
@@ -320,6 +332,39 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
             StatBox("INT", character.intStat, viewModel.getAttributeModifier(character.intStat)) { selectedAttribute = "INT" }
             StatBox("WIS", character.wis, viewModel.getAttributeModifier(character.wis)) { selectedAttribute = "WIS" }
             StatBox("CHA", character.cha, viewModel.getAttributeModifier(character.cha)) { selectedAttribute = "CHA" }
+        }
+    }
+}
+
+@Composable
+fun RestTriggerCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = SpaceBlack)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Build, 
+                contentDescription = "Rest",
+                tint = NeonAmber,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "TAKE A SHORT OR LONG REST",
+                style = MaterialTheme.typography.labelLarge,
+                color = NeonAmber,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

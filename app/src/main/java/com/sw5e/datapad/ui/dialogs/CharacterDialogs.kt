@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.sw5e.datapad.data.CharacterEntity
 import com.sw5e.datapad.ui.theme.*
+import com.sw5e.datapad.ui.MainViewModel
 
 @Composable
 fun NameEditDialog(
@@ -384,6 +385,53 @@ fun AttributeEditDialog(attributeName: String, currentScore: Int, onDismiss: () 
         },
         confirmButton = {
             Button(onClick = { onSave(scoreText.toIntOrNull() ?: currentScore) }) { Text("Save") }
+        }
+    )
+}
+
+@Composable
+fun RestActionDialog(
+    viewModel: MainViewModel,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Take a Rest", color = HoloBlue, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Select the type of rest you want to take.")
+                
+                Button(
+                    onClick = {
+                        viewModel.takeShortRest()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Short Rest (1 Hour)")
+                }
+                
+                Button(
+                    onClick = {
+                        viewModel.takeLongRest()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Long Rest (8 Hours)")
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

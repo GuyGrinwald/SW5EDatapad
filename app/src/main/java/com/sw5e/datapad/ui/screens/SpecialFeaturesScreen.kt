@@ -118,54 +118,6 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Rest Action Controls Header
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardBorder, RoundedCornerShape(12.dp)),
-            colors = CardDefaults.cardColors(containerColor = SpaceBlack)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "FEATURES & TRAITS",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = NeonAmber,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { viewModel.performRest(isLongRest = false) },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        Text("Short Rest", color = HoloBlue)
-                    }
-
-                    Button(
-                        onClick = { viewModel.performRest(isLongRest = true) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = HoloBlue,
-                            contentColor = SpaceBlack
-                        ),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        Text("Long Rest", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

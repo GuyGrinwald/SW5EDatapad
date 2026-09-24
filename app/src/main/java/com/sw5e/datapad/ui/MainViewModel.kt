@@ -432,21 +432,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateCharacter(current.copy(features = updatedFeatures))
     }
 
-    fun performRest(isLongRest: Boolean) {
+    fun takeShortRest() {
         val current = _character.value
-        val updatedFeatures = current.features.map { feat ->
-            val shouldReset = when (feat.resetCondition) {
-                ChargeResetCondition.SHORT_REST -> true
-                ChargeResetCondition.LONG_REST -> isLongRest
-                ChargeResetCondition.MANUAL -> false
+        
+        // Reset features that recharge on a Short Rest
+        val updatedFeatures = current.features.map { feature ->
+            if (feature.usesCharges && feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.SHORT_REST) {
+                feature.copy(currentCharges = calculateMaxCharges(feature))
+            } else {
+                feature
             }
-            if (shouldReset) {
-                feat.copy(currentCharges = calculateMaxCharges(feat))
-            } else feat
         }
         
-        val updatedHp = if (isLongRest) current.maxHp else current.currentHp
-        updateCharacter(current.copy(features = updatedFeatures, currentHp = updatedHp))
+        updateCharacter(current.copy(features = updatedFeatures))
+    }
+
+    fun takeLongRest() {
+        val current = _character.value
+        
+        // Reset features that recharge on Short OR Long Rest
+        val updatedFeatures = current.features.map { feature ->
+            if (feature.usesCharges && (feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.SHORT_REST || 
+                                        feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.LONG_REST)) {
+                feature.copy(currentCharges = calculateMaxCharges(feature))
+            } else {
+                feature
+            }
+        }
+        
+        // SW5e Rules: Long rest restores full HP and half of maximum hit dice
+        val recoveredHitDice = maxOf(1, current.hitDieMaximum / 2)
+        val newHitDieSpent = maxOf(0, current.hitDieSpent - recoveredHitDice)
+        
+        updateCharacter(
+            current.copy(
+                features = updatedFeatures,
+                currentHp = current.maxHp,
+                hitDieSpent = newHitDieSpent
+            )
+        )
     }
 
     fun getProcessedWeapons(): List<ProcessedWeaponCombat> {
