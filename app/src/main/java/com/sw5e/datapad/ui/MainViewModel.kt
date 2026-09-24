@@ -308,10 +308,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val dexMod = getStatModifierByName("DEX")
         
-        val baseAc = equippedArmor?.baseAc ?: 10
-        val cap = equippedArmor?.dexCap ?: 99
+        // Fall back to character armor base (default 10) if baseAc isn't set on equipped armor
+        val baseAc = if (equippedArmor != null && equippedArmor.baseAc > 0) equippedArmor.baseAc else c.armorBase
+
+        // Retrieve DEX cap from equipped armor (null = Light/unarmored, 2 = Medium, 0 = Heavy), falling back to character dexCap
+        val cap = equippedArmor?.dexCap ?: c.dexCap
         val effectiveDex = minOf(dexMod, cap)
-        val shieldBonus = equippedShield?.baseAc ?: 0
+
+        val shieldBonus = (equippedShield?.baseAc ?: 0) + c.shieldBonus
 
         return baseAc + effectiveDex + shieldBonus
     }
@@ -586,9 +590,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("class", c.characterClass)
                     put("characterClass", c.characterClass)
                     put("level", c.level)
-                    put("speed", c.speed)
                     put("str", c.str); put("dex", c.dex); put("con", c.con)
                     put("intStat", c.intStat); put("wis", c.wis); put("cha", c.cha)
+                    put("speed", c.speed)
+                    put("swimSpeed", c.swimSpeed)
+                    put("flySpeed", c.flySpeed)
+                    put("climbSpeed", c.climbSpeed)
                     
                     put("saveProfStr", c.saveProfStr); put("saveProfDex", c.saveProfDex); put("saveProfCon", c.saveProfCon)
                     put("saveProfInt", c.saveProfInt); put("saveProfWis", c.saveProfWis); put("saveProfCha", c.saveProfCha)
@@ -614,12 +621,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val equipmentArray = JSONArray()
                     c.equipment.forEach { item ->
                         equipmentArray.put(JSONObject().apply {
+                            put("id", item.id)
                             put("name", item.name)
                             put("type", item.type)
+                            put("category", item.category.name)
                             put("isEquipped", item.isEquipped)
                             put("cr", item.cr)
                             put("weight", item.weight)
                             put("quantity", item.quantity)
+                            put("baseAc", item.baseAc)
+                            if (item.dexCap != null) put("dexCap", item.dexCap)
+                            put("primaryDamageDice", item.primaryDamageDice)
+                            if (item.secondaryDamageDice != null) put("secondaryDamageDice", item.secondaryDamageDice)
+                            put("damageType", item.damageType)
+                            put("properties", JSONArray(item.properties))
+                            put("attackBonus", item.attackBonus)
+                            put("damageBonus", item.damageBonus)
+                            if (item.customAbilityOverride != null) put("customAbilityOverride", item.customAbilityOverride)
                         })
                     }
                     put("equipment", equipmentArray)
@@ -715,21 +733,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         for (i in 0 until arr.length()) {
                             val itemObj = arr.optJSONObject(i)
                             if (itemObj != null) {
+                                val categoryStr = itemObj.optString("category", "OTHER")
+                                val parsedCategory = try {
+                                    EquipmentCategory.valueOf(categoryStr)
+                                } catch (e: Exception) {
+                                    EquipmentCategory.OTHER
+                                }
+                                val propsArr = itemObj.optJSONArray("properties")
+                                val propsList = if (propsArr != null) List(propsArr.length()) { propsArr.getString(it) } else emptyList()
+
                                 list.add(
                                     EquipmentItem(
+                                        id = itemObj.optString("id", UUID.randomUUID().toString()),
                                         name = itemObj.optString("name", ""),
                                         type = itemObj.optString("type", "Adventuring Gear"),
+                                        category = parsedCategory,
                                         isEquipped = itemObj.optBoolean("isEquipped", false),
                                         cr = itemObj.optDouble("cr", 0.0),
                                         weight = itemObj.optDouble("weight", 0.0),
-                                        quantity = itemObj.optInt("quantity", 1)
+                                        quantity = itemObj.optInt("quantity", 1),
+                                        baseAc = itemObj.optInt("baseAc", 0),
+                                        dexCap = if (itemObj.has("dexCap") && !itemObj.isNull("dexCap")) itemObj.optInt("dexCap") else null,
+                                        primaryDamageDice = itemObj.optString("primaryDamageDice", "1d6"),
+                                        secondaryDamageDice = if (itemObj.has("secondaryDamageDice") && !itemObj.isNull("secondaryDamageDice")) itemObj.optString("secondaryDamageDice") else null,
+                                        damageType = itemObj.optString("damageType", "Kinetic"),
+                                        properties = propsList,
+                                        attackBonus = itemObj.optInt("attackBonus", 0),
+                                        damageBonus = itemObj.optInt("damageBonus", 0),
+                                        customAbilityOverride = if (itemObj.has("customAbilityOverride") && !itemObj.isNull("customAbilityOverride")) itemObj.optString("customAbilityOverride") else null
                                     )
                                 )
                             } else {
                                 val strVal = arr.optString(i, "")
-                                if (strVal.isNotBlank()) {
-                                    list.add(EquipmentItem(name = strVal))
-                                }
+                                if (strVal.isNotBlank()) list.add(EquipmentItem(name = strVal))
                             }
                         }
                         return list
@@ -741,9 +777,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         species = obj.optString("species", "Human"), 
                         characterClass = obj.optString("characterClass", obj.optString("class", "Fighter")),
                         level = obj.optInt("level", 1), 
-                        speed = obj.optInt("speed", 30),
                         str = obj.optInt("str", 10), dex = obj.optInt("dex", 10), con = obj.optInt("con", 10),
                         intStat = obj.optInt("intStat", obj.optInt("int", 10)), wis = obj.optInt("wis", 10), cha = obj.optInt("cha", 10),
+                        speed = obj.optInt("speed", 30),
+                        swimSpeed = obj.optInt("swimSpeed", 0),
+                        flySpeed = obj.optInt("flySpeed", 0),
+                        climbSpeed = obj.optInt("climbSpeed", 0),
                         
                         saveProfStr = obj.optBoolean("saveProfStr", false), saveProfDex = obj.optBoolean("saveProfDex", false), saveProfCon = obj.optBoolean("saveProfCon", false),
                         saveProfInt = obj.optBoolean("saveProfInt", false), saveProfWis = obj.optBoolean("saveProfWis", false), saveProfCha = obj.optBoolean("saveProfCha", false),

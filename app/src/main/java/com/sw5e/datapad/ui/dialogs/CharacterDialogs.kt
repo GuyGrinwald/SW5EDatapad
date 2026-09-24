@@ -287,45 +287,73 @@ fun ArmorClassEditDialog(
 @Composable
 fun SpeedCreditsEditDialog(
     currentSpeed: Int,
+    currentSwimSpeed: Int,
+    currentFlySpeed: Int,
+    currentClimbSpeed: Int,
     currentCredits: Int,
     onDismiss: () -> Unit,
-    onSave: (newSpeed: Int, newCredits: Int) -> Unit
+    onSave: (speed: Int, swimSpeed: Int, flySpeed: Int, climbSpeed: Int, credits: Int) -> Unit
 ) {
     var speedText by remember { mutableStateOf(currentSpeed.toString()) }
+    var swimSpeedText by remember { mutableStateOf(currentSwimSpeed.toString()) }
+    var flySpeedText by remember { mutableStateOf(currentFlySpeed.toString()) }
+    var climbSpeedText by remember { mutableStateOf(currentClimbSpeed.toString()) }
     var creditsText by remember { mutableStateOf(currentCredits.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Speed & Credits", color = HoloBlue, fontWeight = FontWeight.Bold) },
+        title = { Text("Edit Speeds & Credits") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = speedText,
                     onValueChange = { speedText = it },
-                    label = { Text("Movement Speed (ft)") },
+                    label = { Text("Walk Speed (ft)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = swimSpeedText,
+                    onValueChange = { swimSpeedText = it },
+                    label = { Text("Swim Speed (ft)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = flySpeedText,
+                    onValueChange = { flySpeedText = it },
+                    label = { Text("Fly Speed (ft)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = climbSpeedText,
+                    onValueChange = { climbSpeedText = it },
+                    label = { Text("Climb Speed (ft)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = creditsText,
                     onValueChange = { creditsText = it },
-                    label = { Text("Galactic Credits (cr)") },
+                    label = { Text("Credits (¢)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    singleLine = true
                 )
             }
         },
         confirmButton = {
-            Button(
+            TextButton(
                 onClick = {
                     val newSpeed = speedText.toIntOrNull() ?: currentSpeed
+                    val newSwim = swimSpeedText.toIntOrNull() ?: currentSwimSpeed
+                    val newFly = flySpeedText.toIntOrNull() ?: currentFlySpeed
+                    val newClimb = climbSpeedText.toIntOrNull() ?: currentClimbSpeed
                     val newCredits = creditsText.toIntOrNull() ?: currentCredits
-                    onSave(newSpeed, newCredits)
+                    onSave(newSpeed, newSwim, newFly, newClimb, newCredits)
                 }
             ) {
                 Text("Save")

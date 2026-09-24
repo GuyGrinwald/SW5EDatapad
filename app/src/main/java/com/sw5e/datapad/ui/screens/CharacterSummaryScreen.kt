@@ -98,11 +98,20 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
     if (showSpeedCreditsDialog) {
         SpeedCreditsEditDialog(
             currentSpeed = character.speed,
+            currentSwimSpeed = character.swimSpeed,
+            currentFlySpeed = character.flySpeed,
+            currentClimbSpeed = character.climbSpeed,
             currentCredits = character.credits,
             onDismiss = { showSpeedCreditsDialog = false },
-            onSave = { newSpeed, newCredits ->
+            onSave = { newSpeed, newSwimSpeed, newFlySpeed, newClimbSpeed, newCredits ->
                 viewModel.updateCharacter(
-                    character.copy(speed = newSpeed, credits = newCredits)
+                    character.copy(
+                        speed = newSpeed,
+                        swimSpeed = newSwimSpeed,
+                        flySpeed = newFlySpeed,
+                        climbSpeed = newClimbSpeed,
+                        credits = newCredits
+                    )
                 )
                 showSpeedCreditsDialog = false
             }
@@ -266,7 +275,7 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
 
                 HorizontalDivider(color = CardBorder.copy(alpha = 0.5f))
 
-                // --- Row 5: Speed and Credits ---
+                // --- Row 5: Movement Speeds and Credits UI ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -275,9 +284,19 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        HeaderBadge("SPEED", "${character.speed} ft")
+                        HeaderBadge("WALK", "${character.speed} ft")
+                        if (character.swimSpeed > 0) {
+                            HeaderBadge("SWIM", "${character.swimSpeed} ft")
+                        }
+                        if (character.flySpeed > 0) {
+                            HeaderBadge("FLY", "${character.flySpeed} ft")
+                        }
+                        if (character.climbSpeed > 0) {
+                            HeaderBadge("CLIMB", "${character.climbSpeed} ft")
+                        }
                         HeaderBadge("CREDITS", "${character.credits} ¢")
                     }
                 }

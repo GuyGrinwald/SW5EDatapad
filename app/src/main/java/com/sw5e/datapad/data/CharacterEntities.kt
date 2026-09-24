@@ -44,13 +44,18 @@ data class CharacterEntity(
     val saveProfInt: Boolean = false,
     val saveProfWis: Boolean = false,
     val saveProfCha: Boolean = false,
+    
+    // Movement Speeds
+    val speed: Int = 30,
+    val swimSpeed: Int = 0,
+    val flySpeed: Int = 0,
+    val climbSpeed: Int = 0,
 
     // Combat & Health
     val armorClassOverride: Int = 0,
     val armorBase: Int = 10,
     val dexCap: Int = 99,
     val shieldBonus: Int = 0,
-    val speed: Int = 30,
     val currentHp: Int = 10,
     val maxHp: Int = 10,
     val tempHp: Int = 0,
