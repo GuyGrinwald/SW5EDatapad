@@ -5,7 +5,8 @@
     <application
         android:name=".Sw5eApp"
         android:allowBackup="true"
-        android:label="SW5E Datapad">
+        android:label="SW5E Datapad"
+        android:icon="@mipmap/ic_launcher">
         <!-- Main activity entry point -->
         <activity
             android:name=".MainActivity"
