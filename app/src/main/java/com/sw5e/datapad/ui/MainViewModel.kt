@@ -665,15 +665,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             put("cr", item.cr)
                             put("weight", item.weight)
                             put("quantity", item.quantity)
-                            put("baseAc", item.baseAc)
-                            if (item.dexCap != null) put("dexCap", item.dexCap)
-                            put("primaryDamageDice", item.primaryDamageDice)
-                            if (item.secondaryDamageDice != null) put("secondaryDamageDice", item.secondaryDamageDice)
-                            put("damageType", item.damageType)
-                            put("properties", JSONArray(item.properties))
-                            put("attackBonus", item.attackBonus)
-                            put("damageBonus", item.damageBonus)
-                            if (item.customAbilityOverride != null) put("customAbilityOverride", item.customAbilityOverride)
+
+                            // Only export armor stats if the item is Armor or a Shield
+                            if (item.category == EquipmentCategory.ARMOR || item.category == EquipmentCategory.SHIELD) {
+                                put("baseAc", item.baseAc)
+                                if (item.dexCap != null) put("dexCap", item.dexCap)
+                            }
+
+                            // Only export weapon stats if the item is a Weapon[cite: 30]
+                            if (item.category == EquipmentCategory.WEAPON) {
+                                put("primaryDamageDice", item.primaryDamageDice)
+                                if (item.secondaryDamageDice != null) put("secondaryDamageDice", item.secondaryDamageDice)
+                                put("damageType", item.damageType)
+                                put("properties", JSONArray(item.properties))
+                                put("attackBonus", item.attackBonus)
+                                put("damageBonus", item.damageBonus)
+                                if (item.customAbilityOverride != null) {
+                                    put("customAbilityOverride", item.customAbilityOverride)
+                                }
+                            }
                         })
                     }
                     put("equipment", equipmentArray)

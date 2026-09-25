@@ -157,7 +157,7 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
-        // --- 1. Identity & Metadata Card ---
+// --- 1. Identity & Metadata Card ---
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -166,7 +166,7 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // Top: Avatar & Name
+                
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -210,21 +210,32 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
                 HorizontalDivider(color = CardBorder.copy(alpha = 0.3f))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Bottom: Metadata Grid (Inspired by the physical sheet)
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        LabeledData("CLASS & LEVEL", "${character.characterClass} ${character.level}")
-                        LabeledData("BACKGROUND", character.background.ifBlank { "None" })
+                        Box(modifier = Modifier.weight(1f)) {
+                            LabeledData("CLASS & LEVEL", "${character.characterClass} ${character.level}")
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            LabeledData("SPECIES", character.species.ifBlank { "Unknown" })
+                        }
                     }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        LabeledData("SPECIES", character.species.ifBlank { "Unknown" })
-                        LabeledData("PROFICIENCY BONUS", "+$profBonus")
+                        Box(modifier = Modifier.weight(1f)) {
+                            LabeledData("BACKGROUND", character.background.ifBlank { "None" })
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            LabeledData("PROFICIENCY BONUS", "+$profBonus")
+                        }
                     }
                 }
             }
@@ -253,15 +264,13 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
                     HeaderBadge("TEMP HP", "${character.tempHp}")
                 }
                 Box(modifier = Modifier.clickable { showHpDiceDialog = true }) {
-                    HeaderBadge(
-                        "HIT DICE", 
-                        // Fixed: Removed redundant 'd' since hitDieSize already contains it
-                        "${character.hitDieMaximum - character.hitDieSpent}${character.hitDieSize}"
-                    )
+                    val availableDice = character.hitDieMaximum - character.hitDieSpent
+                    // Clean up hitDieSize to prevent double digits/numbers (e.g. "1d8" -> "d8")
+                    val cleanDieSize = "d${character.hitDieSize.substringAfter('d')}"
+                    HeaderBadge("HIT DICE", "$availableDice$cleanDieSize")
                 }
             }
         }
-
         // --- 3. Movement & Utility Card ---
         Card(
             modifier = Modifier
