@@ -623,6 +623,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("id", c.id)
                     put("name", c.name)
                     put("species", c.species)
+                    put("imageUri", c.imageUri)
                     put("class", c.characterClass)
                     put("characterClass", c.characterClass)
                     put("background", c.background)
@@ -879,6 +880,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val updated = _character.value.copy(
                         id = obj.optString("id", _character.value.id.ifBlank { UUID.randomUUID().toString() }),
                         name = obj.optString("name", "Unknown"), 
+                        imageUri = obj.optString("imageUri", ""),
                         species = obj.optString("species", "Human"), 
                         characterClass = obj.optString("characterClass", obj.optString("class", "Fighter")),
                         background = obj.optString("background", ""),
