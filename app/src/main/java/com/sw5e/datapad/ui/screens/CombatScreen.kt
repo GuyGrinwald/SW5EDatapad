@@ -22,17 +22,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sw5e.datapad.data.CharacterFeature
+import com.sw5e.datapad.data.EquipmentCategory
 import com.sw5e.datapad.data.EquipmentItem
 import com.sw5e.datapad.data.ProcessedWeaponCombat
 import com.sw5e.datapad.data.WeaponPropertyDefinition
-import com.sw5e.datapad.data.EquipmentCategory
 import com.sw5e.datapad.ui.MainViewModel
-import com.sw5e.datapad.ui.theme.*
 import com.sw5e.datapad.ui.dialogs.*
-import androidx.compose.ui.text.style.TextAlign
+import com.sw5e.datapad.ui.theme.*
 
 @Composable
 fun CombatScreen(viewModel: MainViewModel) {
@@ -67,7 +67,7 @@ fun CombatScreen(viewModel: MainViewModel) {
                 weapon.type.contains("lightweapon", ignoreCase = true)
             )
         }.map { weapon ->
-            processWeaponCombat(weapon, viewModel, flatBoost, profBonus, strMod, dexMod)
+            processWeaponCombat(weapon, viewModel, flatBoost, profBonus)
         }
     }
     
@@ -80,6 +80,27 @@ fun CombatScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Unified Standard Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Combat Operations",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonAmber
+                )
+                Text(
+                    text = "Armor Class: ${viewModel.calculateArmorClass()} | HP: ${character.currentHp}/${character.maxHp}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HoloBlue
+                )
+            }
+        }
+
         // 1. Tactical HUD (Sticky Top)
         Card(
             modifier = Modifier
@@ -274,17 +295,11 @@ fun CombatScreen(viewModel: MainViewModel) {
     }
 }
 
-/**
- * Calculates attack and damage metrics per weapon based on weapon type, properties,
- * custom ability overrides, and global flat boosts.
- */
 private fun processWeaponCombat(
     weapon: EquipmentItem,
     viewModel: MainViewModel,
     flatBoost: Int,
     profBonus: Int,
-    strMod: Int,
-    dexMod: Int
 ): ProcessedWeaponCombat {
     val overrideAbility = weapon.customAbilityOverride?.takeIf { it.isNotBlank() }
     val overrideMod = overrideAbility?.let { viewModel.getStatModifierByName(it) }
@@ -300,13 +315,11 @@ private fun processWeaponCombat(
     val defaultAbility = if (isRanged) "DEX" else "STR"
     val candidateAbilities = mutableSetOf(defaultAbility)
 
-    // Handle Finesse tag explicitly
     if ("finesse" in propertiesLower) {
         candidateAbilities.add("DEX")
         candidateAbilities.add("STR")
     }
 
-    // Inspect compendium weapon properties for attackAbilityScore overrides
     for (prop in propertiesLower) {
         val baseKey = prop.split(" ", "(").firstOrNull() ?: prop
         val propDef = weaponPropsDict[prop] ?: weaponPropsDict[baseKey]
@@ -315,7 +328,6 @@ private fun processWeaponCombat(
         }
     }
 
-    // Determine highest governing ability modifier
     val (chosenAbility, abilityMod) = when {
         overrideAbility != null && overrideMod != null -> {
             overrideAbility.uppercase() to overrideMod
@@ -359,6 +371,7 @@ private fun processWeaponCombat(
         chosenAbility = chosenAbility
     )
 }
+
 @Composable
 private fun StatBadge(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -418,7 +431,6 @@ private fun WeaponCombatCard(
     val formatBonus = { v: Int -> if (v >= 0) "+$v" else "$v" }
     var isExpanded by remember { mutableStateOf(false) }
 
-    // State for tracking selected property tag description dialog
     var selectedPropertyInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     Card(
@@ -429,7 +441,6 @@ private fun WeaponCombatCard(
         colors = CardDefaults.cardColors(containerColor = SpaceBlack)
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Weapon Header Title & Expand Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -448,7 +459,6 @@ private fun WeaponCombatCard(
                 )
             }
 
-            // Expanded Details Section
             if (isExpanded) {
                 Text(
                     text = "${weapon.type} | Ability: ${processed.chosenAbility}",
@@ -456,14 +466,12 @@ private fun WeaponCombatCard(
                     color = NeonAmber
                 )
 
-                // Weapon Properties Chips with Click Handler
                 if (weapon.properties.isNotEmpty()) {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(weapon.properties) { prop ->
-                            // Look up base key in dictionary (handles properties with numbers/brackets e.g. "Burst 3")
                             val cleanKey = prop.lowercase().trim()
                             val baseKey = cleanKey.split(" ", "(").firstOrNull() ?: cleanKey
                             val propDef = weaponPropertiesDict[cleanKey] ?: weaponPropertiesDict[baseKey]
@@ -474,7 +482,6 @@ private fun WeaponCombatCard(
                                         if (it.isLowerCase()) it.titlecase() else it.toString() 
                                     }
                                     val description = propDef?.description 
-                                        ?: propDef?.description 
                                         ?: "No description available for this property."
                                     selectedPropertyInfo = title to description
                                 },
@@ -491,7 +498,6 @@ private fun WeaponCombatCard(
 
                 HorizontalDivider(color = CardBorder)
 
-                // Attack & Damage Stats
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Attack Modifier: ${formatBonus(processed.attackBonus)}", fontWeight = FontWeight.Bold, color = HoloBlue)
                     Text("Breakdown: ${processed.attackBonusBreakdown}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -509,7 +515,6 @@ private fun WeaponCombatCard(
         }
     }
 
-    // Tag Description Dialog
     selectedPropertyInfo?.let { (title, description) ->
         AlertDialog(
             onDismissRequest = { selectedPropertyInfo = null },
@@ -538,4 +543,3 @@ private fun WeaponCombatCard(
         )
     }
 }
-

@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import com.sw5e.datapad.data.AppDatabase
 import com.sw5e.datapad.data.CharacterEntity
 import com.sw5e.datapad.data.CharacterSkillEntity
@@ -43,7 +45,25 @@ fun DataVaultScreen(viewModel: MainViewModel) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Data Vault & Archives", style = MaterialTheme.typography.titleLarge, color = HoloBlue)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Data Vault & Archives",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonAmber
+                )
+                Text(
+                    text = "Character Backup & Recovery",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HoloBlue
+                )
+            }
+        }
 
         Card(modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(12.dp))) {
             Column(modifier = Modifier.padding(16.dp)) {

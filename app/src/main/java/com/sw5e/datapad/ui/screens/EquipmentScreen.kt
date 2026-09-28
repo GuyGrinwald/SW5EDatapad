@@ -207,7 +207,7 @@ fun EquipmentScreen(viewModel: MainViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Equipment Inventory", style = MaterialTheme.typography.titleLarge, color = NeonAmber)
+                Text("Inventory", style = MaterialTheme.typography.titleLarge, color = NeonAmber)
                 Text(
                     text = "Total Weight: ${if (totalWeight % 1.0 == 0.0) totalWeight.toInt() else totalWeight} / $maxWeight lb",
                     style = MaterialTheme.typography.bodyMedium,

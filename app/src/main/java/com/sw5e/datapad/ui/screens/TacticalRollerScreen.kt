@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.text.font.FontWeight
 import com.sw5e.datapad.ui.AdvantageMode
 import com.sw5e.datapad.ui.MainViewModel
 import com.sw5e.datapad.ui.theme.*
@@ -108,6 +109,26 @@ fun TacticalRollerScreen(viewModel: MainViewModel) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Tactical Dice Roller",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonAmber
+                )
+                Text(
+                    text = "Mode: ${advantageMode.name} | Active Pool: ${dicePool.values.sum()} Dice",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HoloBlue
+                )
+            }
+        }
+        
         Card(modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(8.dp))) {
             Text(lastRoll?.breakdownText ?: "Select dice pool & tap ROLL", modifier = Modifier.padding(12.dp), color = NeonAmber)
         }

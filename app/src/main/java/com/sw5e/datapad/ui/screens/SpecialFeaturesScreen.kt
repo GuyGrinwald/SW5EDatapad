@@ -123,7 +123,19 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Character Features", style = MaterialTheme.typography.titleMedium, color = HoloBlue, fontWeight = FontWeight.Bold)
+            Column {
+                Text(
+                    text = "Character Features",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonAmber
+                )
+                Text(
+                    text = "Total Features: ${character.features.size}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HoloBlue
+                )
+            }
             Button(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))

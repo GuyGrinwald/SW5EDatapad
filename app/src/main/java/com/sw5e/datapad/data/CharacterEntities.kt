@@ -74,6 +74,7 @@ data class CharacterEntity(
     val maxTechPoints: Int = 0,
     val forceAttackSpecialBonus: Int = 0,
     val techAttackSpecialBonus: Int = 0,
+    val activeConcentration: String? = null,
     
     // Economy
     val credits: Int = 0,
@@ -86,7 +87,7 @@ data class CharacterEntity(
     val forcePowers: Map<Int, List<String>> = emptyMap(),
     val techPowers: Map<Int, List<String>> = emptyMap(),
 
-    // Feats, Traits, and other features can be added here as needed
+    // Feats, Traits, and other features
     val feats: List<String> = emptyList(),
 
     // Combat Proficiencies
@@ -101,14 +102,14 @@ data class CharacterEntity(
 data class CharacterSkillEntity(
     val skillName: String,
     val associatedAttribute: String,
-    val proficiencyLevel: Int = 0, // 0=None, 1=Proficient, 2=Expertise
-    val manualOverride: Int = 0    // Flat additive bonus/penalty
+    val proficiencyLevel: Int = 0,
+    val manualOverride: Int = 0
 )
 
 data class EquipmentItem(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
-    val type: String = "Adventuring Gear", // e.g. "Medium Armor", "Vibroweapons"
+    val type: String = "Adventuring Gear",
     val category: EquipmentCategory = EquipmentCategory.OTHER,
     val isEquipped: Boolean = false,
     val cr: Double = 0.0,
@@ -117,22 +118,22 @@ data class EquipmentItem(
 
     // Armor Stats
     val baseAc: Int = 0,
-    val dexCap: Int? = 99, // null = no cap (Light), 2 = Medium, 0 = Heavy
+    val dexCap: Int? = 99,
 
     // Weapon Stats
-    val primaryDamageDice: String = "1d6",      // e.g. "1d8"
-    val secondaryDamageDice: String? = null,    // Used for Versatile weapons (e.g. "1d10")
-    val damageType: String = "Kinetic",         // e.g., Kinetic, Energy, Ion
-    val properties: List<String> = emptyList(), // e.g., ["finesse", "versatile", "light", "heavy"]
-    val attackBonus: Int = 0,                   // Item attack modifier (+1, +2 weapon)
-    val damageBonus: Int = 0,                   // Item damage modifier
-    val customAbilityOverride: String? = null   // e.g., "WIS" for Force-empowered strikes
+    val primaryDamageDice: String = "1d6",
+    val secondaryDamageDice: String? = null,
+    val damageType: String = "Kinetic",
+    val properties: List<String> = emptyList(),
+    val attackBonus: Int = 0,
+    val damageBonus: Int = 0,
+    val customAbilityOverride: String? = null
 )
 
 data class CharacterFeature(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
-    val source: String = "", // e.g., "Class: Guardian", "Species: Human", "Item: Belt of Strength"
+    val source: String = "",
     val description: String = "",
     
     // Charge Management
@@ -140,19 +141,19 @@ data class CharacterFeature(
     val currentCharges: Int = 0,
     val fixedMaxCharges: Int = 1,
     val scalingType: MaxChargesScaling = MaxChargesScaling.FIXED,
-    val chargesBonusOffset: Int = 0, // Flat bonus added to formula (e.g. Prof Bonus + 2)
+    val chargesBonusOffset: Int = 0,
     val resetCondition: ChargeResetCondition = ChargeResetCondition.LONG_REST,
     
     // Skill / Roll Linkage
-    val linkedSkillName: String? = null,      // e.g. "Athletics" to trigger a skill check
-    val linkedSaveAttribute: String? = null   // e.g. "DEX" for save DC calculation
+    val linkedSkillName: String? = null,
+    val linkedSaveAttribute: String? = null
 )
 
 data class ProcessedWeaponCombat(
     val weapon: EquipmentItem,
     val attackBonus: Int,
     val attackBonusBreakdown: String,
-    val primaryDamageText: String,      // e.g. "1d6 + 4 Kinetic"
-    val versatileDamageText: String?,   // e.g. "1d8 + 4 Kinetic" (if Versatile)
-    val chosenAbility: String           // e.g. "DEX" or "STR"
+    val primaryDamageText: String,
+    val versatileDamageText: String?,
+    val chosenAbility: String
 )

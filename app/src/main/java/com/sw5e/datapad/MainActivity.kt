@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                     NavDestination(3, "Special Features", Icons.Default.Star),
                     NavDestination(4, "Powers", Icons.Default.Cyclone),
                     NavDestination(5, "Combat", Icons.Default.MilitaryTech),
-                    NavDestination(6, "Gear", Icons.Default.Backpack),
+                    NavDestination(6, "Inventory", Icons.Default.Backpack),
                     NavDestination(7, "Dice", Icons.Default.Casino),
                     NavDestination(8, "Vault", Icons.Default.Storage)
                 )

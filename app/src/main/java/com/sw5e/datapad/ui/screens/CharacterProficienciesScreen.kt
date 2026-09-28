@@ -164,6 +164,26 @@ fun CharacterProficienciesScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Character Proficiencies",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonAmber
+                )
+                Text(
+                    text = "Proficiency Bonus: +$profBonus",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HoloBlue
+                )
+            }
+        }
+        
         ScrollableTabRow(
             selectedTabIndex = selectedTabIndex,
             containerColor = SpaceBlack,

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.InputStreamReader
 import java.util.UUID
 
@@ -220,6 +221,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setActiveConcentration(powerName: String?) {
+        updateCharacter(_character.value.copy(activeConcentration = powerName))
+    }
+
     private fun getDefaultSkillsFromCompendium(): List<CharacterSkillEntity> {
         return _compendiumSkills.value.map {
             CharacterSkillEntity(
@@ -267,7 +272,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val currentChar = _character.value
                 val charId = currentChar.id.ifBlank { UUID.randomUUID().toString() }
 
-                // Clean up previous image file if one exists
                 if (!currentChar.imageUri.isNullOrEmpty()) {
                     val oldUri = Uri.parse(currentChar.imageUri)
                     if (oldUri.scheme == "file") {
@@ -275,7 +279,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                // Create a unique internal file using a timestamp to force Coil image cache invalidation
                 val photoFile = File(context.filesDir, "portrait_${charId}_${System.currentTimeMillis()}.jpg")
 
                 context.contentResolver.openInputStream(uri)?.use { input ->
@@ -352,11 +355,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val equippedShield = c.equipment.firstOrNull { it.isEquipped && it.category == EquipmentCategory.SHIELD }
 
         val dexMod = getStatModifierByName("DEX")
-        
-        // Fall back to character armor base (default 10) if baseAc isn't set on equipped armor
         val baseAc = if (equippedArmor != null && equippedArmor.baseAc > 0) equippedArmor.baseAc else c.armorBase
-
-        // Retrieve DEX cap from equipped armor (null = Light/unarmored, 2 = Medium, 0 = Heavy), falling back to character dexCap
         val cap = equippedArmor?.dexCap ?: c.dexCap
         val effectiveDex = minOf(dexMod, cap)
 
@@ -480,16 +479,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun takeShortRest(hitDiceSpentAmount: Int, healingReceived: Int) {
         val current = _character.value
         
-        // Reset features that recharge on a Short Rest
         val updatedFeatures = current.features.map { feature ->
-            if (feature.usesCharges && feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.SHORT_REST) {
+            if (feature.usesCharges && feature.resetCondition == ChargeResetCondition.SHORT_REST) {
                 feature.copy(currentCharges = calculateMaxCharges(feature))
             } else {
                 feature
             }
         }
         
-        // Apply healing (capped at maxHp) and update spent hit dice
         val newHp = (current.currentHp + healingReceived).coerceAtMost(current.maxHp)
         val newHitDieSpent = (current.hitDieSpent + hitDiceSpentAmount).coerceAtMost(current.hitDieMaximum)
         
@@ -505,17 +502,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun takeLongRest() {
         val current = _character.value
         
-        // Reset features that recharge on Short OR Long Rest
         val updatedFeatures = current.features.map { feature ->
-            if (feature.usesCharges && (feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.SHORT_REST || 
-                                        feature.resetCondition == com.sw5e.datapad.data.ChargeResetCondition.LONG_REST)) {
+            if (feature.usesCharges && (feature.resetCondition == ChargeResetCondition.SHORT_REST || 
+                                        feature.resetCondition == ChargeResetCondition.LONG_REST)) {
                 feature.copy(currentCharges = calculateMaxCharges(feature))
             } else {
                 feature
             }
         }
         
-        // SW5e Rules: Long rest restores full HP and half of maximum hit dice
         val recoveredHitDice = maxOf(1, current.hitDieMaximum / 2)
         val newHitDieSpent = maxOf(0, current.hitDieSpent - recoveredHitDice)
         
@@ -540,7 +535,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val isRanged = weapon.type.contains("Blaster", ignoreCase = true) || "ranged" in props
             val defaultAbility = if (isRanged) "DEX" else "STR"
 
-            // Inspect the hidden attackAbilityScore field of each property tag
             val candidateAbilities = mutableSetOf(defaultAbility)
             for (prop in props) {
                 val propDef = propsDict[prop]
@@ -550,7 +544,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            // Determine governing ability score using existing modifier comparison logic
             val (abilityMod, abilityName) = if (weapon.customAbilityOverride != null) {
                 Pair(getStatModifierByName(weapon.customAbilityOverride), weapon.customAbilityOverride.uppercase())
             } else {
@@ -563,7 +556,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         maxMod = mod
                         bestAbility = ability
                     } else if (mod == maxMod && ability == "DEX" && bestAbility == "STR") {
-                        // Maintain tie-breaker preference for DEX over STR when modifiers match
                         bestAbility = "DEX"
                     }
                 }
@@ -694,6 +686,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("maxTechPoints", c.maxTechPoints)
                     put("currentForcePoints", c.currentForcePoints)
                     put("maxForcePoints", c.maxForcePoints)
+                    if (c.activeConcentration != null) {
+                        put("activeConcentration", c.activeConcentration)
+                    }
                     
                     put("resistances", JSONArray(c.resistances))
                     put("immunities", JSONArray(c.immunities))
@@ -710,13 +705,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             put("weight", item.weight)
                             put("quantity", item.quantity)
 
-                            // Only export armor stats if the item is Armor or a Shield
                             if (item.category == EquipmentCategory.ARMOR || item.category == EquipmentCategory.SHIELD) {
                                 put("baseAc", item.baseAc)
                                 if (item.dexCap != null) put("dexCap", item.dexCap)
                             }
 
-                            // Only export weapon stats if the item is a Weapon[cite: 30]
                             if (item.category == EquipmentCategory.WEAPON) {
                                 put("primaryDamageDice", item.primaryDamageDice)
                                 if (item.secondaryDamageDice != null) put("secondaryDamageDice", item.secondaryDamageDice)
@@ -955,6 +948,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         credits = obj.optInt("credits", 0),
                         currentTechPoints = obj.optInt("currentTechPoints", 0), maxTechPoints = obj.optInt("maxTechPoints", 0),
                         currentForcePoints = obj.optInt("currentForcePoints", 0), maxForcePoints = obj.optInt("maxForcePoints", 0),
+                        activeConcentration = if (obj.has("activeConcentration") && !obj.isNull("activeConcentration")) obj.optString("activeConcentration") else null,
 
                         resistances = parseStringList("resistances"),
                         immunities = parseStringList("immunities"),
