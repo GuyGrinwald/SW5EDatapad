@@ -161,7 +161,8 @@ fun PowersScreen(viewModel: MainViewModel) {
                     text = "Force Points: ${character.currentForcePoints}/${character.maxForcePoints} | Tech Points: ${character.currentTechPoints}/${character.maxTechPoints}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = HoloBlue
+                    color = HoloBlue,
+                    modifier = Modifier.clickable { showResourceDialog = true }
                 )
             }
         }
@@ -170,22 +171,6 @@ fun PowersScreen(viewModel: MainViewModel) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                // Point Trackers Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(modifier = Modifier.weight(1f).clickable { showResourceDialog = true }) {
-                        ResourceBox("Force Points", "${character.currentForcePoints}/${character.maxForcePoints}")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.weight(1f).clickable { showResourceDialog = true }) {
-                        ResourceBox("Tech Points", "${character.currentTechPoints}/${character.maxTechPoints}")
-                    }
-                }
-            }
-
             // Active Concentration Summary Banner
             concentratingPower?.let { powerName ->
                 item {
@@ -351,9 +336,6 @@ fun PowersScreen(viewModel: MainViewModel) {
                                         concentratingPower = powerName
                                     }
                                 },
-                                onToggleConcentration = {
-                                    concentratingPower = if (isConcentrating) null else powerName
-                                },
                                 onRemove = {
                                     if (isConcentrating) concentratingPower = null
                                     val map = character.forcePowers.toMutableMap()
@@ -403,9 +385,6 @@ fun PowersScreen(viewModel: MainViewModel) {
                                         concentratingPower = powerName
                                     }
                                 },
-                                onToggleConcentration = {
-                                    concentratingPower = if (isConcentrating) null else powerName
-                                },
                                 onRemove = {
                                     if (isConcentrating) concentratingPower = null
                                     val map = character.techPowers.toMutableMap()
@@ -424,16 +403,6 @@ fun PowersScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun ResourceBox(label: String, value: String) {
-    Card(modifier = Modifier.fillMaxWidth().border(1.dp, CardBorder, RoundedCornerShape(8.dp))) {
-        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(value, style = MaterialTheme.typography.titleMedium, color = HoloBlue, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
 fun ExpandablePowerCard(
     powerName: String,
     powerData: PowerDefinition?,
@@ -442,7 +411,6 @@ fun ExpandablePowerCard(
     isForcePower: Boolean,
     isConcentrating: Boolean,
     onActivate: () -> Unit,
-    onToggleConcentration: () -> Unit,
     onRemove: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -525,7 +493,7 @@ fun ExpandablePowerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
@@ -538,22 +506,6 @@ fun ExpandablePowerCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Activate ($costLabel)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
-
-                FilterChip(
-                    selected = isConcentrating,
-                    onClick = onToggleConcentration,
-                    label = {
-                        Text(
-                            if (isConcentrating) "Concentrating" else "Concentrate",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = NeonAmber,
-                        selectedLabelColor = SpaceBlack
-                    ),
-                    modifier = Modifier.height(30.dp)
-                )
             }
 
             AnimatedVisibility(visible = expanded && powerData != null) {

@@ -48,15 +48,26 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
         }
     }
 
+    // Dynamically extract unique non-blank origins/sources from existing features
+    val availableOrigins = remember(character.features) {
+        character.features
+            .map { it.source.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
     val attributeOptions = remember { listOf("STR", "DEX", "CON", "INT", "WIS", "CHA") }
 
     // Filter states
+    var selectedOriginFilter by remember { mutableStateOf<String?>(null) }
     var selectedScalingFilter by remember { mutableStateOf<MaxChargesScaling?>(null) }
     var selectedResetFilter by remember { mutableStateOf<ChargeResetCondition?>(null) }
     var selectedSkillFilter by remember { mutableStateOf<String?>(null) }
     var selectedSaveFilter by remember { mutableStateOf<String?>(null) }
 
     // Filter dropdown expansion states
+    var showOriginFilterMenu by remember { mutableStateOf(false) }
     var showScalingFilterMenu by remember { mutableStateOf(false) }
     var showResetFilterMenu by remember { mutableStateOf(false) }
     var showSkillFilterMenu by remember { mutableStateOf(false) }
@@ -67,17 +78,19 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
 
     val filteredFeatures = remember(
         character.features,
+        selectedOriginFilter,
         selectedScalingFilter,
         selectedResetFilter,
         selectedSkillFilter,
         selectedSaveFilter
     ) {
         character.features.filter { feature ->
+            val matchesOrigin = selectedOriginFilter == null || feature.source.trim().equals(selectedOriginFilter, ignoreCase = true)
             val matchesScaling = selectedScalingFilter == null || (feature.usesCharges && feature.scalingType == selectedScalingFilter)
             val matchesReset = selectedResetFilter == null || (feature.usesCharges && feature.resetCondition == selectedResetFilter)
             val matchesSkill = selectedSkillFilter == null || feature.linkedSkillName == selectedSkillFilter
             val matchesSave = selectedSaveFilter == null || feature.linkedSaveAttribute == selectedSaveFilter
-            matchesScaling && matchesReset && matchesSkill && matchesSave
+            matchesOrigin && matchesScaling && matchesReset && matchesSkill && matchesSave
         }
     }
 
@@ -118,28 +131,24 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Cleaned up Header Row without subtitle & compact button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Character Features",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NeonAmber
-                )
-                Text(
-                    text = "Total Features: ${character.features.size}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = HoloBlue
-                )
-            }
-            Button(onClick = { showAddDialog = true }) {
+            Text(
+                text = "Character Features",
+                style = MaterialTheme.typography.titleLarge,
+                color = NeonAmber
+            )
+            FilledTonalButton(
+                onClick = { showAddDialog = true },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Add Feature")
+                Text("Add Feature", style = MaterialTheme.typography.labelLarge)
             }
         }
 
@@ -157,6 +166,44 @@ fun SpecialFeaturesScreen(viewModel: MainViewModel) {
                 tint = HoloBlue,
                 modifier = Modifier.size(20.dp)
             )
+
+            // Dynamic Origin / Source Filter
+            if (availableOrigins.isNotEmpty()) {
+                Box {
+                    FilterChip(
+                        selected = selectedOriginFilter != null,
+                        onClick = { showOriginFilterMenu = true },
+                        label = { Text(selectedOriginFilter?.let { "Origin: $it" } ?: "Origin") },
+                        trailingIcon = {
+                            if (selectedOriginFilter != null) {
+                                IconButton(
+                                    onClick = { selectedOriginFilter = null },
+                                    modifier = Modifier.size(16.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            } else {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = showOriginFilterMenu,
+                        onDismissRequest = { showOriginFilterMenu = false },
+                        modifier = Modifier.heightIn(max = 240.dp)
+                    ) {
+                        availableOrigins.forEach { origin ->
+                            DropdownMenuItem(
+                                text = { Text(origin) },
+                                onClick = {
+                                    selectedOriginFilter = origin
+                                    showOriginFilterMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             // Charges Formula / Scaling Filter
             Box {
