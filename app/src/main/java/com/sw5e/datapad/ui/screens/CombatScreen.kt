@@ -28,6 +28,7 @@ import com.sw5e.datapad.data.CharacterFeature
 import com.sw5e.datapad.data.EquipmentItem
 import com.sw5e.datapad.data.ProcessedWeaponCombat
 import com.sw5e.datapad.data.WeaponPropertyDefinition
+import com.sw5e.datapad.data.EquipmentCategory
 import com.sw5e.datapad.ui.MainViewModel
 import com.sw5e.datapad.ui.theme.*
 import com.sw5e.datapad.ui.dialogs.*
@@ -57,11 +58,19 @@ fun CombatScreen(viewModel: MainViewModel) {
 
     // Process equipped weapons dynamically with proper attack type logic
     val processedWeapons = remember(character, flatBoost) {
-        character.equipment.filter { it.isEquipped && it.category == com.sw5e.datapad.data.EquipmentCategory.WEAPON }.map { weapon ->
+        character.equipment.filter { weapon ->
+            weapon.isEquipped && (
+                weapon.category == EquipmentCategory.WEAPON ||
+                weapon.type.contains("blaster", ignoreCase = true) ||
+                weapon.type.contains("weapon", ignoreCase = true) ||
+                weapon.type.contains("vibro", ignoreCase = true) ||
+                weapon.type.contains("lightweapon", ignoreCase = true)
+            )
+        }.map { weapon ->
             processWeaponCombat(weapon, viewModel, flatBoost, profBonus, strMod, dexMod)
         }
     }
-
+    
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Weapons")
 
@@ -280,37 +289,54 @@ private fun processWeaponCombat(
     val overrideAbility = weapon.customAbilityOverride?.takeIf { it.isNotBlank() }
     val overrideMod = overrideAbility?.let { viewModel.getStatModifierByName(it) }
 
-    val propertiesLower = weapon.properties.map { it.lowercase() }
-    val isFinesse = "finesse" in propertiesLower
+    val weaponPropsDict = viewModel.weaponPropertiesDict.value
+    val propertiesLower = weapon.properties.map { it.lowercase().trim() }
+    
     val isRanged = weapon.type.contains("blaster", ignoreCase = true) || 
                    weapon.type.contains("ranged", ignoreCase = true) || 
                    "range" in propertiesLower || 
                    "ammunition" in propertiesLower
-    val isThrown = "thrown" in propertiesLower
 
-    // Ability Modifier Resolution
+    val defaultAbility = if (isRanged) "DEX" else "STR"
+    val candidateAbilities = mutableSetOf(defaultAbility)
+
+    // Handle Finesse tag explicitly
+    if ("finesse" in propertiesLower) {
+        candidateAbilities.add("DEX")
+        candidateAbilities.add("STR")
+    }
+
+    // Inspect compendium weapon properties for attackAbilityScore overrides
+    for (prop in propertiesLower) {
+        val baseKey = prop.split(" ", "(").firstOrNull() ?: prop
+        val propDef = weaponPropsDict[prop] ?: weaponPropsDict[baseKey]
+        propDef?.attackAbilityScore?.takeIf { it.isNotBlank() }?.let {
+            candidateAbilities.add(it.uppercase())
+        }
+    }
+
+    // Determine highest governing ability modifier
     val (chosenAbility, abilityMod) = when {
         overrideAbility != null && overrideMod != null -> {
             overrideAbility.uppercase() to overrideMod
         }
-        isFinesse -> {
-            val bestMod = maxOf(strMod, dexMod)
-            val name = if (bestMod == dexMod) "DEX" else "STR"
-            name to bestMod
-        }
-        isRanged -> {
-            "DEX" to dexMod
-        }
-        isThrown -> {
-            "STR" to strMod
-        }
-        else -> { // Melee / Vibroweapons / Lightweapons / Improvised / Default
-            "STR" to strMod
+        else -> {
+            var bestAbility = defaultAbility
+            var maxMod = viewModel.getStatModifierByName(defaultAbility)
+
+            for (ability in candidateAbilities) {
+                val mod = viewModel.getStatModifierByName(ability)
+                if (mod > maxMod || (mod == maxMod && ability == "DEX" && bestAbility == "STR")) {
+                    maxMod = mod
+                    bestAbility = ability
+                }
+            }
+            bestAbility to maxMod
         }
     }
 
     val totalAtkBonus = profBonus + abilityMod + weapon.attackBonus + flatBoost
-    val totalDmgBonus = weapon.damageBonus + flatBoost
+    val totalDmgBonus = abilityMod + weapon.damageBonus + flatBoost
 
     val formatBonus = { v: Int -> if (v >= 0) "+$v" else "$v" }
     val formatDmgBonus = { v: Int -> if (v > 0) " + $v" else if (v < 0) " - ${-v}" else "" }
@@ -333,7 +359,6 @@ private fun processWeaponCombat(
         chosenAbility = chosenAbility
     )
 }
-
 @Composable
 private fun StatBadge(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

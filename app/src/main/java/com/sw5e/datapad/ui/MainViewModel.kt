@@ -260,6 +260,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         updateCharacter(updated)
     }
+    
+    fun updateCharacterImage(context: Context, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentChar = _character.value
+                val charId = currentChar.id.ifBlank { UUID.randomUUID().toString() }
+
+                // Clean up previous image file if one exists
+                if (!currentChar.imageUri.isNullOrEmpty()) {
+                    val oldUri = Uri.parse(currentChar.imageUri)
+                    if (oldUri.scheme == "file") {
+                        oldUri.path?.let { File(it).delete() }
+                    }
+                }
+
+                // Create a unique internal file using a timestamp to force Coil image cache invalidation
+                val photoFile = File(context.filesDir, "portrait_${charId}_${System.currentTimeMillis()}.jpg")
+
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    photoFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                val localUriString = Uri.fromFile(photoFile).toString()
+                val updated = currentChar.copy(imageUri = localUriString)
+
+                _character.value = updated
+                dao.insertCharacter(updated)
+
+                _characters.value = _characters.value.map {
+                    if (it.id == updated.id) {
+                        it.copy(
+                            name = updated.name,
+                            species = updated.species,
+                            className = updated.characterClass,
+                            level = updated.level
+                        )
+                    } else it
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     fun addToolProficiency(tool: String) {
         val trimmed = tool.trim()
@@ -645,10 +690,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     put("hitDiceCount", c.hitDieMaximum)
                     put("hitDieMaximum", c.hitDieMaximum)
                     put("credits", c.credits)
-                    put("techPoints", c.currentTechPoints)
                     put("currentTechPoints", c.currentTechPoints)
                     put("maxTechPoints", c.maxTechPoints)
-                    put("forcePoints", c.currentForcePoints)
                     put("currentForcePoints", c.currentForcePoints)
                     put("maxForcePoints", c.maxForcePoints)
                     
@@ -799,12 +842,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         for (i in 0 until arr.length()) {
                             val itemObj = arr.optJSONObject(i)
                             if (itemObj != null) {
-                                val categoryStr = itemObj.optString("category", "OTHER")
+                                val categoryStr = itemObj.optString("category", "").trim()
+                                val typeStr = itemObj.optString("type", "").lowercase()
+
                                 val parsedCategory = try {
-                                    EquipmentCategory.valueOf(categoryStr)
+                                    EquipmentCategory.valueOf(categoryStr.uppercase())
                                 } catch (e: Exception) {
-                                    EquipmentCategory.OTHER
+                                    when {
+                                        categoryStr.equals("weapon", ignoreCase = true) ||
+                                        typeStr.contains("blaster") || 
+                                        typeStr.contains("weapon") || 
+                                        typeStr.contains("vibro") || 
+                                        typeStr.contains("lightweapon") -> EquipmentCategory.WEAPON
+
+                                        categoryStr.equals("armor", ignoreCase = true) -> EquipmentCategory.ARMOR
+                                        categoryStr.equals("shield", ignoreCase = true) -> EquipmentCategory.SHIELD
+                                        else -> EquipmentCategory.OTHER
+                                    }
                                 }
+
                                 val propsArr = itemObj.optJSONArray("properties")
                                 val propsList = if (propsArr != null) List(propsArr.length()) { propsArr.getString(it) } else emptyList()
 
@@ -829,9 +885,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                         customAbilityOverride = if (itemObj.has("customAbilityOverride") && !itemObj.isNull("customAbilityOverride")) itemObj.optString("customAbilityOverride") else null
                                     )
                                 )
-                            } else {
-                                val strVal = arr.optString(i, "")
-                                if (strVal.isNotBlank()) list.add(EquipmentItem(name = strVal))
                             }
                         }
                         return list
@@ -900,8 +953,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         armorBase = obj.optInt("armorBase", 10), dexCap = obj.optInt("dexCap", 99), shieldBonus = obj.optInt("shieldBonus", 0),
                         hitDieSpent = obj.optInt("hitDieSpent", 0), hitDieMaximum = obj.optInt("hitDieMaximum", obj.optInt("hitDiceCount", 1)),
                         credits = obj.optInt("credits", 0),
-                        currentTechPoints = obj.optInt("currentTechPoints", obj.optInt("techPoints", 0)), maxTechPoints = obj.optInt("maxTechPoints", 0),
-                        currentForcePoints = obj.optInt("currentForcePoints", obj.optInt("forcePoints", 0)), maxForcePoints = obj.optInt("maxForcePoints", 0),
+                        currentTechPoints = obj.optInt("currentTechPoints", 0), maxTechPoints = obj.optInt("maxTechPoints", 0),
+                        currentForcePoints = obj.optInt("currentForcePoints", 0), maxForcePoints = obj.optInt("maxForcePoints", 0),
 
                         resistances = parseStringList("resistances"),
                         immunities = parseStringList("immunities"),

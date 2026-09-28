@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.sw5e.datapad.ui.MainViewModel
 import com.sw5e.datapad.ui.components.HeaderBadge
@@ -42,13 +43,14 @@ fun CharacterSummaryScreen(viewModel: MainViewModel) {
     var showSpeedCreditsDialog by remember { mutableStateOf(false) }
     var selectedAttribute by remember { mutableStateOf<String?>(null) }
     var showRestDialog by remember { mutableStateOf(false) }
-
+        
     // Media Picker for Character Portrait
+    val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.updateCharacter(character.copy(imageUri = it.toString()))
+            viewModel.updateCharacterImage(context, it)
         }
     }
 
